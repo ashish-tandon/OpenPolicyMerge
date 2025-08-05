@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "CSV Downloads" %} | {% trans "Represent Elected Officials and Electoral Districts API for Canada" %}{% endblock %}
+{% block bodyattributes %}id="data"{% endblock %}
+
+{% block content %}
+<div class="jumbotron bg-primary" id="header">
+  <div class="container-fluid">
+    <h1 class="solo">{% trans "Download elected officials' contact information as a spreadsheet." %}</h1>
+  </div>
+</div>
+
+<div class="container-fluid" id="instructions">
+  <p>{% trans 'All downloads are available in the <abbr title="Comma-Separated Value" data-toggle="tooltip">CSV</abbr> file format. Click any link to download a CSV, which you can open in spreadsheet software like Microsoft Excel or LibreOffice Calc.' %}</p>
+
+  <p>{% trans 'Are we missing information that you need? <a href="mailto:represent@opennorth.ca">Contact us</a> so that we can make it a priority.' %}</p>
+
+  <div id="downloads">
+    <p id="loading"><img src="{% static "img/ajax-loader.gif" %}" width="16" height="16" alt=""> {% trans "Retrieving information…" %}</p>
+  </div>
+</div>
+
+<div class="container-fluid banner banner-default" id="back">
+  <p>{% trans "Do more with Represent." %}</p>
+  <div>
+    <a class="btn btn-lg" role="button" href="/">{% trans "What is Represent?" %}</a>
+    <a class="btn btn-lg" role="button" href="{% url "apidoc" %}">{% trans "Read the API reference" %}</a>
+    <span class="hidden-xxs"><a class="btn btn-lg" role="button" href="{% url "demo" %}">{% trans "Try the “Find Your Reps” app" %}</a></span>
+    <span class="visible-xxs"><a class="btn btn-lg" role="button" href="{% url "demo" %}">{% trans "Try the demo app" %}</a></span>
+  </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script src="{% url "javascript-catalog" %}"></script>
+<script src="{% static "js/data.js" %}"></script>
+{% endblock %}

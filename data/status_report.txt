@@ -1,0 +1,25 @@
+OpenPolicyAshBack2 Data Status Report
+===============================================
+
+OpenParliament Database:
+✓ OpenParliament database: openparliament.public.sql (6.5 GB)
+
+Represent Canada Packages:
+✗ represent-boundaries not installed
+✗ represent-representatives not installed
+✗ represent-postcodes not installed
+
+Data Structure:
+✓ represent-canada-data directory created
+✗ shapefiles symlink missing
+
+Setup Scripts:
+✓ PostgreSQL setup script created
+✓ Docker setup script created
+✓ Data loader script created
+
+Next Steps:
+1. Run database setup: cd data && ./setup_postgres.sh
+2. Download shapefiles to data/represent-canada-data/shapefiles/
+3. Load data: python data/load_data.py
+4. Start services: docker-compose up -d

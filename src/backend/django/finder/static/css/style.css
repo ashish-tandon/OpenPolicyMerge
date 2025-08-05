@@ -1,0 +1,407 @@
+abbr[title] {
+  cursor: auto;
+  border-bottom: none;
+}
+
+pre {
+  overflow: auto;
+  font-size: 13px;
+  font-family: monospace;
+  white-space: pre;
+  word-wrap: normal;
+}
+pre .key {
+  color: #660E7A;
+}
+pre .structure {
+  color: #B58110;
+}
+pre .value {
+  color: #038C35;
+}
+
+.bg-primary {
+  color: #fff;
+  background-color: #158cba;
+}
+.img-rounded {
+  -webkit-border-radius: 10px;
+  border-radius: 10px;
+}
+
+.visible-xxs {
+  display: none !important;
+}
+@media (max-width: 479px) {
+  .hidden-xxs {
+    display: none !important;
+  }
+  .visible-xxs {
+    display: inline-block !important;
+  }
+}
+
+.container-fluid { /* align with jumbotron */
+  padding-left: 45px;
+  padding-right: 45px;
+}
+.jumbotron .container-fluid {
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+#navbar {
+  margin-top: 20px;
+  border: none; /* remove border */
+}
+.navbar .navbar-nav { /* remove top and bottom margin */
+  margin-top: 0;
+  margin-bottom: 0;
+  font-size: 18px; /* normalize font sizes */
+}
+.navbar .navbar-brand {
+  padding-top: 0; /* remove top padding */
+  font-weight: 500;
+}
+.navbar .navbar-toggle:hover { /* change color */
+  background-color: #f9f9f9;
+  border-color: #f9f9f9;
+}
+.navbar .navbar-toggle .icon-bar { /* change color */
+  background-color: #333;
+}
+.navbar .nav > li > a:hover,
+.navbar .nav > li > a:focus { /* change color */
+  background-color: #f9f9f9;
+}
+#sub-navbar-collapse {
+  margin-left: -15px;
+  padding-left: 0;
+}
+@media (max-width: 479px) {
+  .container-fluid {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+  .jumbotron {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+.jumbotron {
+  margin-bottom: 80px;
+  padding-top: 60px;
+  padding-bottom: 60px;
+}
+.jumbotron h1 {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+.jumbotron p {
+  margin-bottom: 0;
+  font-size: 18px;
+  font-weight: normal;
+}
+.jumbotron .btn {
+  margin: 20px 10px 0 10px; /* stacking */
+  padding: 15px 30px;
+  font-size: 18px;
+}
+.jumbotron h1.solo {
+  margin-bottom: 0;
+}
+
+#header {
+  text-align: center;
+}
+#header .btn {
+  border-color: #fff;
+  color: #fff;
+  background-color: transparent;
+}
+#header .btn:hover,
+#header .btn:focus {
+  color: #158cba;
+  background-color: #fff;
+}
+
+.row {
+  margin-bottom: 80px;
+}
+div div .row {
+  margin-bottom: 0;
+}
+.row h1 {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+.row h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-weight: 200;
+}
+.row p {
+  margin-bottom: 20px;
+  font-size: 18px;
+}
+.row ul {
+  margin-bottom: 0;
+  padding-left: 0;
+  font-size: 18px;
+}
+.row ul li {
+  margin-left: 1em;
+}
+.row blockquote {
+  border: none;
+  padding: 0;
+}
+.row blockquote img {
+  position: absolute;
+}
+.row blockquote p {
+  position: relative;
+  padding-left: 42px;
+  font-size: 14px;
+}
+.row blockquote cite {
+  color: #999;
+  font-style: italic;
+}
+
+#benefits h1 {
+  color: #127ba3;
+  font-weight: 200;
+}
+#users h1 {
+  margin-bottom: 0;
+}
+#users img {
+  margin: 20px 15px 0;
+}
+@media (max-width: 479px) {
+  #users img {
+    margin: 20px 10px 0;
+  }
+}
+
+#coverage {
+  margin-bottom: 60px;
+}
+#coverage h1 {
+  margin-bottom: 40px; /* same spacing in header */
+}
+@media (max-width: 767px) { /* stacking */
+  #coverage h1 {
+    margin-bottom: 20px;
+  }
+  #coverage h2 {
+    margin-top: 20px;
+  }
+}
+#features {
+  text-align: center;
+}
+#features .img-group {
+  display: block;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+#features p {
+  margin-bottom: 0;
+}
+#features img {
+  margin: 0 15px;
+}
+
+#getting-started {
+  margin-bottom: 80px;
+  text-align: center;
+}
+#getting-started .btn {
+  margin: 20px 10px 0 10px; /* stacking */
+  padding: 15px 30px;
+  font-size: 18px;
+  font-weight: 500;
+  border-color: #ff4136;
+  color: #fff;
+  background-color: #ff4136;
+}
+#getting-started .btn:hover,
+#getting-started .btn:focus {
+  color: #ff4136;
+  background-color: #fff;
+}
+
+.banner {
+  padding-top: 30px;
+  padding-bottom: 30px;
+  text-align: center;
+}
+#api .banner {
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+.banner p {
+  margin-bottom: 0;
+  font-size: 18px;
+}
+
+.banner-default {
+  background-color: #fef9e7;
+}
+#api .banner-default {
+  color: #fff;
+  background-color: #2ecc71;
+}
+.banner-default p {
+  font-size: 24px;
+  font-weight: 300;
+}
+#newsletter span {
+  margin-right: 30px;
+}
+.banner-default .btn {
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: uppercase;
+  border-color: #ff4136;
+  color: #fff;
+  background-color: #ff4136;
+}
+.banner-default .btn:hover,
+.banner-default .btn:focus {
+  color: #ff4136;
+  background-color: transparent;
+}
+@media (max-width: 768px) { /* include iPad */
+  #newsletter span {
+    display: block;
+    margin-right: 0;
+    margin-bottom: 20px;
+  }
+}
+p#usage,
+p#government {
+  padding-top: 30px;
+  font-size: 18px;
+}
+
+ul#fields {
+  margin-bottom: 10px;
+}
+
+#back {
+  margin-top: 70px;
+}
+#back .btn {
+  margin: 20px 10px 0 10px;
+}
+#back .adoption {
+  margin-bottom: 40px;
+}
+#back .adoption img {
+  margin: 20px 15px 0;
+}
+#back .support {
+  margin-bottom: 20px;
+}
+
+#api .banner h2 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+#boundary h3 {
+  margin-top: 40px;
+  margin-bottom: 40px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  color: #fff;
+  background-color: #bdc3c7;
+  text-align: center;
+}
+
+#api dl {
+  margin-bottom: 0;
+}
+#api dt {
+  margin-top: 20px;
+}
+#api dd a.example {
+  display: block;
+  min-height: 20px;
+  padding: 9px;
+  background-color: #f5f5f5;
+  border: 1px solid #e3e3e3;
+  border-radius: 3px;
+  -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05);
+          box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+#api dd p {
+  margin-top: 20px;
+  margin-bottom: 0;
+}
+#api dd span {
+  font-size: 13px;
+  color: #999;
+}
+#api table {
+  margin-bottom: 40px;f
+}
+#api table code {
+  white-space: normal;
+}
+p#fields {
+  margin-top: 40px;
+}
+
+
+#apibrowser,
+#instructions,
+#privacy,
+#api section .container-fluid {
+  font-size: 18px;
+}
+#privacy,
+#api section .container-fluid {
+  margin-bottom: 40px;
+}
+#api #representative .container-fluid {
+  margin-bottom: 20px;
+}
+
+@media (min-width: 768px) {
+  .jumbotron h1 {
+    font-size: 36px;
+  }
+}
+@media (max-width: 991px) {
+  h1,
+  h2,
+  #coverage h1 {
+    font-size: 28px;
+  }
+}
+@media (max-width: 479px) {
+  h1,
+  h2 {
+    font-size: 24px;
+  }
+
+  .navbar .navbar-nav,
+  .jumbotron p,
+  .jumbotron .btn,
+  .row p,
+  .row ul,
+  #getting-started .btn,
+  .banner p,
+  p#usage,
+  p#government,
+  #apibrowser,
+  #instructions,
+  #privacy,
+  #api section .container-fluid {
+    font-size: 16px;
+  }
+}
