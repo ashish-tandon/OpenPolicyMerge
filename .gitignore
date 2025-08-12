@@ -56,10 +56,15 @@ temp/
 *.sql.bz2
 *.sql.gz
 *.dump
+*.db
+*.sqlite
+*.sqlite3
 
-# Data directories
+# Data directories with large files
 data/shapefiles/
 data/represent-canada-data/
+data/openparliament/
+data/canadian-government/
 
 # Node.js
 node_modules/
@@ -94,14 +99,13 @@ MANIFEST
 venv/
 env/
 ENV/
+.venv/
 
 # External repositories (original source repos)
 external-repos/ 
 
-# Legacy embedded git repositories
-legacy/*/.git/
-legacy/*/node_modules/
-legacy/*/vendor/
+# Legacy folder - EXCLUDE ENTIRE DIRECTORY
+legacy/
 
 # Database
 *.db
@@ -114,4 +118,34 @@ logs/
 
 # Temporary files
 *.tmp
-*.temp 
+*.temp
+
+# Test cassettes and large test files
+**/tests/**/cassettes/
+**/tests/**/*.yaml
+**/tests/**/*.yml
+
+# Large binary files
+*.bin
+*.dat
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.parquet
+*.avro
+*.orc
+
+# Cache directories
+.cache/
+cache/
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig 
