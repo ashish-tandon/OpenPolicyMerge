@@ -1,0 +1,380 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "OpenPolicy Platform - System Overview",
+    "tags": ["openpolicy", "platform", "monitoring"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Platform Health Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"openpolicy-platform\"}",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Service Response Times",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"openpolicy-platform\"}[5m])) by (le, service))",
+            "legendFormat": "{{service}} - P95"
+          },
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=\"openpolicy-platform\"}[5m])) by (le, service))",
+            "legendFormat": "{{service}} - P50"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Response Time (seconds)",
+            "unit": "s"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Request Rate by Service",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{job=\"openpolicy-platform\"}[5m])) by (service)",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests per Second",
+            "unit": "reqps"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Error Rate by Service",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{job=\"openpolicy-platform\", status=~\"5..\"}[5m])) by (service) / sum(rate(http_requests_total{job=\"openpolicy-platform\"}[5m])) by (service)",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Error Rate",
+            "unit": "percentunit"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Database Connection Pool",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "pg_stat_database_numbackends{job=\"postgres\"}",
+            "legendFormat": "Active Connections"
+          },
+          {
+            "expr": "pg_stat_database_max_connections{job=\"postgres\"}",
+            "legendFormat": "Max Connections"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Connections"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "Database Query Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(pg_stat_database_blk_read_time{job=\"postgres\"}[5m])",
+            "legendFormat": "{{datname}} - Read Time"
+          },
+          {
+            "expr": "rate(pg_stat_database_blk_write_time{job=\"postgres\"}[5m])",
+            "legendFormat": "{{datname}} - Write Time"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Time (seconds)"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      },
+      {
+        "id": 7,
+        "title": "System Resources",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "legendFormat": "{{instance}} - CPU Usage"
+          },
+          {
+            "expr": "100 - (avg by (instance) (node_memory_MemAvailable_bytes) / avg by (instance) (node_memory_MemTotal_bytes) * 100)",
+            "legendFormat": "{{instance}} - Memory Usage"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Usage (%)",
+            "unit": "percent"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+      },
+      {
+        "id": 8,
+        "title": "Disk I/O",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(node_disk_io_time_seconds_total[5m])",
+            "legendFormat": "{{instance}} - {{device}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "I/O Time (seconds)"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+      },
+      {
+        "id": 9,
+        "title": "Network Traffic",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(node_network_receive_bytes_total[5m])",
+            "legendFormat": "{{instance}} - {{device}} - Receive"
+          },
+          {
+            "expr": "rate(node_network_transmit_bytes_total[5m])",
+            "legendFormat": "{{instance}} - {{device}} - Transmit"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Bytes per Second",
+            "unit": "Bps"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32}
+      },
+      {
+        "id": 10,
+        "title": "Policy Evaluations",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(policy_evaluations_total{job=\"policy-service\"}[5m])",
+            "legendFormat": "Policy Evaluations"
+          },
+          {
+            "expr": "rate(policy_evaluations_duration_seconds_sum{job=\"policy-service\"}[5m]) / rate(policy_evaluations_duration_seconds_count{job=\"policy-service\"}[5m])",
+            "legendFormat": "Average Evaluation Time"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Rate / Time"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32}
+      },
+      {
+        "id": 11,
+        "title": "Search Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(search_queries_total{job=\"search-service\"}[5m])",
+            "legendFormat": "Search Queries"
+          },
+          {
+            "expr": "rate(search_indexing_documents_total{job=\"search-service\"}[5m])",
+            "legendFormat": "Documents Indexed"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Rate"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 40}
+      },
+      {
+        "id": 12,
+        "title": "ETL Processing",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(etl_jobs_total{job=\"etl-service\"}[5m])",
+            "legendFormat": "ETL Jobs"
+          },
+          {
+            "expr": "rate(etl_records_processed_total{job=\"etl-service\"}[5m])",
+            "legendFormat": "Records Processed"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Rate"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 40}
+      },
+      {
+        "id": 13,
+        "title": "Scraper Activity",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(scraper_runs_total{job=\"scraper-service\"}[5m])",
+            "legendFormat": "Scraper Runs"
+          },
+          {
+            "expr": "rate(scraper_records_collected_total{job=\"scraper-service\"}[5m])",
+            "legendFormat": "Records Collected"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Rate"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 48}
+      },
+      {
+        "id": 14,
+        "title": "Authentication Activity",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(auth_login_attempts_total{job=\"auth-service\"}[5m])",
+            "legendFormat": "Login Attempts"
+          },
+          {
+            "expr": "rate(auth_failed_logins_total{job=\"auth-service\"}[5m])",
+            "legendFormat": "Failed Logins"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Rate"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 48}
+      },
+      {
+        "id": 15,
+        "title": "Notification Delivery",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(notifications_sent_total{job=\"notification-service\"}[5m])",
+            "legendFormat": "Notifications Sent"
+          },
+          {
+            "expr": "rate(notifications_delivered_total{job=\"notification-service\"}[5m])",
+            "legendFormat": "Notifications Delivered"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Rate"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 56}
+      },
+      {
+        "id": 16,
+        "title": "Configuration Changes",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(config_changes_total{job=\"config-service\"}[5m])",
+            "legendFormat": "Configuration Changes"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Rate"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 56}
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1,
+    "links": [],
+    "gnetId": null,
+    "templating": {
+      "list": [
+        {
+          "name": "service",
+          "type": "query",
+          "query": "label_values(up{job=\"openpolicy-platform\"}, service)",
+          "refresh": 2,
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "instance",
+          "type": "query",
+          "query": "label_values(up{job=\"openpolicy-platform\"}, instance)",
+          "refresh": 2,
+          "includeAll": true,
+          "multi": true
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "expr": "changes(up{job=\"openpolicy-platform\"}[5m]) > 0",
+          "titleFormat": "Service {{service}} deployment",
+          "textFormat": "Service {{service}} was deployed at {{$value}}"
+        }
+      ]
+    }
+  }
+}

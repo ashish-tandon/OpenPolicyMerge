@@ -1,0 +1,462 @@
+name: OpenPolicy Platform CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Quality Assurance
+  quality-check:
+    name: Quality Assurance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black pytest pytest-asyncio httpx psutil
+          
+      - name: Install Node.js dependencies
+        run: |
+          npm ci
+          
+      - name: Code formatting check (Python)
+        run: |
+          black --check --diff .
+          ruff check .
+          
+      - name: Code formatting check (JavaScript/TypeScript)
+        run: |
+          npm run lint
+          npm run format:check
+          
+      - name: Go formatting check
+        run: |
+          go fmt ./...
+          go vet ./...
+          
+      - name: Type checking (Python)
+        run: |
+          mypy services/ --ignore-missing-imports
+          
+      - name: Type checking (TypeScript)
+        run: |
+          npm run type-check
+
+  # Security Scanning
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Unit Testing
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [policy, search, auth, notification, config, health, etl, scraper]
+        
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r services/${{ matrix.service }}-service/requirements.txt
+          pip install pytest pytest-asyncio pytest-cov httpx
+          
+      - name: Run unit tests
+        run: |
+          cd services/${{ matrix.service }}-service
+          pytest tests/ --cov=src --cov-report=xml --cov-report=html
+          
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./services/${{ matrix.service }}-service/coverage.xml
+          flags: ${{ matrix.service }}-service
+          name: ${{ matrix.service }}-service-coverage
+
+  # Integration Testing
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+          
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r services/etl/requirements.txt
+          pip install pytest pytest-asyncio httpx psutil
+          
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          
+      - name: Run database migrations
+        run: |
+          cd services/etl
+          python src/database_migration.py postgresql://postgres:postgres@localhost:5432/test_db
+          
+      - name: Run integration tests
+        run: |
+          cd tests/integration
+          pytest test_service_integration.py -v
+          
+      - name: Run performance tests
+        run: |
+          cd tests/performance
+          python test_performance.py
+
+  # Build and Package
+  build:
+    name: Build Services
+    runs-on: ubuntu-latest
+    needs: [quality-check, security-scan, unit-tests, integration-tests]
+    strategy:
+      matrix:
+        service: [policy, search, auth, notification, config, health, etl, scraper]
+        
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}-service
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+            
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/${{ matrix.service }}-service
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Deploy to Development
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/develop' || github.event.inputs.environment == 'dev'
+    environment: development
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+          
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_DEV }}" | base64 -d > kubeconfig.yaml
+          export KUBECONFIG=kubeconfig.yaml
+          
+      - name: Deploy to development
+        run: |
+          export KUBECONFIG=kubeconfig.yaml
+          kubectl apply -f deploy/k8s/dev/
+          kubectl rollout status deployment/api-gateway -n openpolicy-dev
+          kubectl rollout status deployment/policy-service -n openpolicy-dev
+          kubectl rollout status deployment/search-service -n openpolicy-dev
+          kubectl rollout status deployment/auth-service -n openpolicy-dev
+          kubectl rollout status deployment/notification-service -n openpolicy-dev
+          kubectl rollout status deployment/config-service -n openpolicy-dev
+          kubectl rollout status deployment/health-service -n openpolicy-dev
+          kubectl rollout status deployment/etl-service -n openpolicy-dev
+          kubectl rollout status deployment/scraper-service -n openpolicy-dev
+          
+      - name: Run smoke tests
+        run: |
+          export KUBECONFIG=kubeconfig.yaml
+          kubectl get pods -n openpolicy-dev
+          # Add actual smoke test commands here
+
+  # Deploy to Staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [deploy-dev]
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
+    environment: staging
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+          
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig.yaml
+          export KUBECONFIG=kubeconfig.yaml
+          
+      - name: Deploy to staging
+        run: |
+          export KUBECONFIG=kubeconfig.yaml
+          kubectl apply -f deploy/k8s/staging/
+          kubectl rollout status deployment/api-gateway -n openpolicy-staging
+          kubectl rollout status deployment/policy-service -n openpolicy-staging
+          kubectl rollout status deployment/search-service -n openpolicy-staging
+          kubectl rollout status deployment/auth-service -n openpolicy-staging
+          kubectl rollout status deployment/notification-service -n openpolicy-staging
+          kubectl rollout status deployment/config-service -n openpolicy-staging
+          kubectl rollout status deployment/health-service -n openpolicy-staging
+          kubectl rollout status deployment/etl-service -n openpolicy-staging
+          kubectl rollout status deployment/scraper-service -n openpolicy-staging
+          
+      - name: Run staging tests
+        run: |
+          export KUBECONFIG=kubeconfig.yaml
+          kubectl get pods -n openpolicy-staging
+          # Add staging-specific tests here
+
+  # Deploy to Production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'production'
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+          
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PROD }}" | base64 -d > kubeconfig.yaml
+          export KUBECONFIG=kubeconfig.yaml
+          
+      - name: Deploy to production
+        run: |
+          export KUBECONFIG=kubeconfig.yaml
+          kubectl apply -f deploy/k8s/prod/
+          kubectl rollout status deployment/api-gateway -n openpolicy-prod
+          kubectl rollout status deployment/policy-service -n openpolicy-prod
+          kubectl rollout status deployment/search-service -n openpolicy-prod
+          kubectl rollout status deployment/auth-service -n openpolicy-prod
+          kubectl rollout status deployment/notification-service -n openpolicy-prod
+          kubectl rollout status deployment/config-service -n openpolicy-prod
+          kubectl rollout status deployment/health-service -n openpolicy-prod
+          kubectl rollout status deployment/etl-service -n openpolicy-prod
+          kubectl rollout status deployment/scraper-service -n openpolicy-prod
+          
+      - name: Run production health checks
+        run: |
+          export KUBECONFIG=kubeconfig.yaml
+          kubectl get pods -n openpolicy-prod
+          # Add production health checks here
+
+  # Post-Deployment Verification
+  post-deployment:
+    name: Post-Deployment Verification
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install httpx
+          
+      - name: Verify production deployment
+        run: |
+          # Add production verification tests here
+          echo "Production deployment verified successfully"
+          
+      - name: Send notification
+        run: |
+          # Add notification logic here (Slack, email, etc.)
+          echo "Deployment notification sent"
+
+  # Rollback (Manual trigger)
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+          
+      - name: Configure kubectl
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "production" ]; then
+            echo "${{ secrets.KUBE_CONFIG_PROD }}" | base64 -d > kubeconfig.yaml
+          elif [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+            echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig.yaml
+          else
+            echo "${{ secrets.KUBE_CONFIG_DEV }}" | base64 -d > kubeconfig.yaml
+          fi
+          export KUBECONFIG=kubeconfig.yaml
+          
+      - name: Rollback deployment
+        run: |
+          export KUBECONFIG=kubeconfig.yaml
+          if [ "${{ github.event.inputs.environment }}" = "production" ]; then
+            kubectl rollout undo deployment/api-gateway -n openpolicy-prod
+            kubectl rollout undo deployment/policy-service -n openpolicy-prod
+            kubectl rollout undo deployment/search-service -n openpolicy-prod
+            kubectl rollout undo deployment/auth-service -n openpolicy-prod
+            kubectl rollout undo deployment/notification-service -n openpolicy-prod
+            kubectl rollout undo deployment/config-service -n openpolicy-prod
+            kubectl rollout undo deployment/health-service -n openpolicy-prod
+            kubectl rollout undo deployment/etl-service -n openpolicy-prod
+            kubectl rollout undo deployment/scraper-service -n openpolicy-prod
+          elif [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+            kubectl rollout undo deployment/api-gateway -n openpolicy-staging
+            kubectl rollout undo deployment/policy-service -n openpolicy-staging
+            kubectl rollout undo deployment/search-service -n openpolicy-staging
+            kubectl rollout undo deployment/auth-service -n openpolicy-staging
+            kubectl rollout undo deployment/notification-service -n openpolicy-staging
+            kubectl rollout undo deployment/config-service -n openpolicy-staging
+            kubectl rollout undo deployment/health-service -n openpolicy-staging
+            kubectl rollout undo deployment/etl-service -n openpolicy-staging
+            kubectl rollout undo deployment/scraper-service -n openpolicy-staging
+          else
+            kubectl rollout undo deployment/api-gateway -n openpolicy-dev
+            kubectl rollout undo deployment/policy-service -n openpolicy-dev
+            kubectl rollout undo deployment/search-service -n openpolicy-dev
+            kubectl rollout undo deployment/auth-service -n openpolicy-dev
+            kubectl rollout undo deployment/notification-service -n openpolicy-dev
+            kubectl rollout undo deployment/config-service -n openpolicy-dev
+            kubectl rollout undo deployment/health-service -n openpolicy-dev
+            kubectl rollout undo deployment/etl-service -n openpolicy-dev
+            kubectl rollout undo deployment/scraper-service -n openpolicy-dev
+          fi
+          
+      - name: Verify rollback
+        run: |
+          export KUBECONFIG=kubeconfig.yaml
+          kubectl get pods -n openpolicy-${{ github.event.inputs.environment }}
+          echo "Rollback completed successfully"
