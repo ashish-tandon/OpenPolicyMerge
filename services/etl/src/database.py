@@ -58,12 +58,8 @@ def create_async_engine():
         
         async_engine = create_async_engine(
             async_url,
-            poolclass=QueuePool,
-            pool_size=settings.database.pool_size,
-            max_overflow=settings.database.max_overflow,
             echo=settings.database.echo,
-            pool_pre_ping=True,
-            pool_recycle=3600,
+            pool_pre_ping=True
         )
         
         AsyncSessionLocal = async_sessionmaker(

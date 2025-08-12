@@ -3,7 +3,7 @@ Configuration management for the OpenPolicy ETL service.
 """
 import os
 from typing import Optional, List, Dict, Any
-from pydantic import BaseSettings, Field, validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -80,7 +80,8 @@ class APISettings(BaseSettings):
     cors_allow_methods: List[str] = Field(default=["*"], env="API_CORS_ALLOW_METHODS")
     cors_allow_headers: List[str] = Field(default=["*"], env="API_CORS_ALLOW_HEADERS")
     
-    @validator("cors_origins", pre=True)
+    @field_validator("cors_origins", mode="before")
+    @classmethod
     def parse_cors_origins(cls, v):
         """Parse CORS origins from string."""
         if isinstance(v, str):
@@ -98,74 +99,38 @@ class LoggingSettings(BaseSettings):
     format: str = Field(default="json", env="LOG_FORMAT")
     file_path: Optional[str] = Field(default=None, env="LOG_FILE_PATH")
     max_size: str = Field(default="100MB", env="LOG_MAX_SIZE")
+    max_files: int = Field(default=5, env="LOG_MAX_FILES")
     backup_count: int = Field(default=5, env="LOG_BACKUP_COUNT")
-    rotation: str = Field(default="1 day", env="LOG_ROTATION")
     
     class Config:
         env_prefix = "LOG_"
 
 
+class SecuritySettings(BaseSettings):
+    """Security configuration settings."""
+    
+    secret_key: str = Field(default="your-secret-key-here", env="SECRET_KEY")
+    algorithm: str = Field(default="HS256", env="ALGORITHM")
+    access_token_expire_minutes: int = Field(default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
+    rate_limit_enabled: bool = Field(default=True, env="RATE_LIMIT_ENABLED")
+    rate_limit_max_requests: int = Field(default=100, env="RATE_LIMIT_MAX_REQUESTS")
+    rate_limit_window_seconds: int = Field(default=60, env="RATE_LIMIT_WINDOW_SECONDS")
+    
+    class Config:
+        env_prefix = "SECURITY_"
+
+
 class MonitoringSettings(BaseSettings):
-    """Monitoring and observability settings."""
+    """Monitoring configuration settings."""
     
     enabled: bool = Field(default=True, env="MONITORING_ENABLED")
-    prometheus_enabled: bool = Field(default=True, env="PROMETHEUS_ENABLED")
-    opentelemetry_enabled: bool = Field(default=True, env="OPENTELEMETRY_ENABLED")
-    metrics_port: int = Field(default=9090, env="METRICS_PORT")
+    prometheus_port: int = Field(default=9090, env="PROMETHEUS_PORT")
+    metrics_path: str = Field(default="/metrics", env="METRICS_PATH")
     health_check_interval: int = Field(default=30, env="HEALTH_CHECK_INTERVAL")
     health_check_timeout: int = Field(default=10, env="HEALTH_CHECK_TIMEOUT")
     
     class Config:
         env_prefix = "MONITORING_"
-
-
-class ETLSettings(BaseSettings):
-    """ETL-specific configuration settings."""
-    
-    # Data Sources
-    parliamentary_data_url: str = Field(default="https://api.parliament.uk", env="ETL_PARLIAMENTARY_DATA_URL")
-    civic_data_url: str = Field(default="https://api.civicdata.com", env="ETL_CIVIC_DATA_URL")
-    government_data_url: str = Field(default="https://data.gov.uk", env="ETL_GOVERNMENT_DATA_URL")
-    
-    # Processing Settings
-    batch_size: int = Field(default=1000, env="ETL_BATCH_SIZE")
-    max_workers: int = Field(default=4, env="ETL_MAX_WORKERS")
-    timeout: int = Field(default=300, env="ETL_TIMEOUT")
-    retry_attempts: int = Field(default=3, env="ETL_RETRY_ATTEMPTS")
-    retry_delay: int = Field(default=60, env="ETL_RETRY_DELAY")
-    
-    # Storage Settings
-    data_dir: str = Field(default="/app/data", env="ETL_DATA_DIR")
-    temp_dir: str = Field(default="/app/temp", env="ETL_TEMP_DIR")
-    archive_dir: str = Field(default="/app/archive", env="ETL_ARCHIVE_DIR")
-    
-    # Schedule Settings
-    default_schedule: str = Field(default="0 */6 * * *", env="ETL_DEFAULT_SCHEDULE")  # Every 6 hours
-    cleanup_schedule: str = Field(default="0 2 * * *", env="ETL_CLEANUP_SCHEDULE")    # Daily at 2 AM
-    
-    # Data Retention
-    retention_days: int = Field(default=90, env="ETL_RETENTION_DAYS")
-    max_file_size: str = Field(default="1GB", env="ETL_MAX_FILE_SIZE")
-    
-    class Config:
-        env_prefix = "ETL_"
-
-
-class SecuritySettings(BaseSettings):
-    """Security configuration settings."""
-    
-    secret_key: str = Field(default="your-super-secret-key-change-in-production", env="SECRET_KEY")
-    algorithm: str = Field(default="HS256", env="SECURITY_ALGORITHM")
-    access_token_expire_minutes: int = Field(default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
-    refresh_token_expire_days: int = Field(default=7, env="REFRESH_TOKEN_EXPIRE_DAYS")
-    
-    # Rate Limiting
-    rate_limit_enabled: bool = Field(default=True, env="RATE_LIMIT_ENABLED")
-    rate_limit_requests: int = Field(default=100, env="RATE_LIMIT_REQUESTS")
-    rate_limit_window: int = Field(default=900, env="RATE_LIMIT_WINDOW")  # 15 minutes
-    
-    class Config:
-        env_prefix = "SECURITY_"
 
 
 class Settings(BaseSettings):
@@ -175,54 +140,29 @@ class Settings(BaseSettings):
     environment: str = Field(default="development", env="ENVIRONMENT")
     debug: bool = Field(default=False, env="DEBUG")
     
-    # Service Configuration
+    # Service settings
     database: DatabaseSettings = DatabaseSettings()
     redis: RedisSettings = RedisSettings()
     celery: CelerySettings = CelerySettings()
     api: APISettings = APISettings()
     logging: LoggingSettings = LoggingSettings()
-    monitoring: MonitoringSettings = MonitoringSettings()
-    etl: ETLSettings = ETLSettings()
     security: SecuritySettings = SecuritySettings()
+    monitoring: MonitoringSettings = MonitoringSettings()
     
-    # Feature Flags
-    features: Dict[str, bool] = Field(default={
-        "data_validation": True,
-        "data_transformation": True,
-        "data_loading": True,
-        "scheduling": True,
-        "monitoring": True,
-        "notifications": True
-    }, env="FEATURES")
+    @property
+    def is_production(self) -> bool:
+        """Check if running in production environment."""
+        return self.environment.lower() == "production"
+    
+    @property
+    def is_development(self) -> bool:
+        """Check if running in development environment."""
+        return self.environment.lower() == "development"
     
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        
-        # Set debug mode based on environment
-        if self.environment == "development":
-            self.debug = True
-            self.api.debug = True
-            self.logging.level = "DEBUG"
-    
-    @property
-    def is_development(self) -> bool:
-        """Check if running in development mode."""
-        return self.environment == "development"
-    
-    @property
-    def is_production(self) -> bool:
-        """Check if running in production mode."""
-        return self.environment == "production"
-    
-    @property
-    def is_testing(self) -> bool:
-        """Check if running in testing mode."""
-        return self.environment == "testing"
 
 
 # Global settings instance
@@ -230,11 +170,5 @@ settings = Settings()
 
 
 def get_settings() -> Settings:
-    """Get the global settings instance."""
+    """Get application settings."""
     return settings
-
-
-def reload_settings() -> None:
-    """Reload settings from environment."""
-    global settings
-    settings = Settings()

@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database with PostGIS
+  postgres:
+    image: postgis/postgis:15-3.3
+    environment:
+      - POSTGRES_DB=openpolicy
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./data:/data
+    networks:
+      - openpolicy-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - openpolicy-network
+
+  # Open Policy Agent
+  opa:
+    image: openpolicyagent/opa:latest
+    ports:
+      - "8181:8181"
+    command: run --server --addr :8181 --cors
+    volumes:
+      - ./src/policies:/policies
+    networks:
+      - openpolicy-network
+
+  # Simple API using Node.js (easier to get running)
+  api:
+    image: node:18-alpine
+    ports:
+      - "8080:8080"
+    working_dir: /app
+    volumes:
+      - ./src/api:/app
+    command: sh -c "npm install express cors && node main.js"
+    environment:
+      - PORT=8080
+    depends_on:
+      - postgres
+      - redis
+      - opa
+    networks:
+      - openpolicy-network
+
+  # Simple frontend using nginx with static files
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ./src/frontend:/usr/share/nginx/html
+      - ./src/frontend/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - api
+    networks:
+      - openpolicy-network
+
+  # Prometheus for monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - openpolicy-network
+
+  # Grafana for dashboards
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - openpolicy-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  grafana_data:
+
+networks:
+  openpolicy-network:
+    driver: bridge

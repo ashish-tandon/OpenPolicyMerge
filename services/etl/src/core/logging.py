@@ -34,17 +34,15 @@ def setup_logging():
         diagnose=True
     )
     
-    # File logging
+    # Add file handler if configured
     if settings.logging.file_path:
         logger.add(
             settings.logging.file_path,
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
-            level=settings.logging.level,
-            rotation=settings.logging.rotation,
-            retention=settings.logging.backup_count,
-            compression="zip",
-            backtrace=True,
-            diagnose=True
+            level=settings.logging.level.upper(),  # Ensure uppercase
+            format=settings.logging.format,
+            rotation=settings.logging.max_size,
+            retention=settings.logging.max_files,
+            compression="zip"
         )
     
     # Error logging to separate file

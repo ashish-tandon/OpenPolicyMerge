@@ -26,8 +26,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.logger = get_logger("middleware.rate_limit")
         
         # Rate limiting configuration
-        self.max_requests = settings.security.rate_limit_requests
-        self.window_seconds = settings.security.rate_limit_window
+        self.max_requests = settings.security.rate_limit_max_requests
+        self.window_seconds = settings.security.rate_limit_window_seconds
         
         # Exempt paths from rate limiting
         self.exempt_paths = {

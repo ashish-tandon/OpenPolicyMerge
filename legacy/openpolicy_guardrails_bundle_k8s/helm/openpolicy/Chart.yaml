@@ -1,0 +1,37 @@
+apiVersion: v2
+name: openpolicy
+description: OpenPolicy Platform - Comprehensive data scraping and policy management platform
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - openpolicy
+  - data-scraping
+  - policy-management
+  - kubernetes
+  - microservices
+home: https://github.com/your-org/openpolicy
+sources:
+  - https://github.com/your-org/openpolicy
+maintainers:
+  - name: OpenPolicy Team
+    email: team@openpolicy.org
+icon: https://raw.githubusercontent.com/your-org/openpolicy/main/docs/images/logo.png
+
+dependencies:
+  - name: postgresql
+    version: 12.5.31
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: 17.10.3
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+  - name: prometheus
+    version: 25.8.0
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: monitoring.enabled
+  - name: grafana
+    version: 7.0.19
+    repository: https://grafana.github.io/helm-charts
+    condition: monitoring.enabled

@@ -1,0 +1,53 @@
+# Cursor Global Rules — OpenPolicy Monorepo (Kubernetes-first)
+
+# Scope of Truth (priority order)
+- Primary: docs/UNIFIED_SERVICE_REFERENCE.md
+- Process: docs/instructions.md  # contains RUN_PLAYBOOK
+- Architecture: docs/architecture.md
+- Deployment: docs/DEPLOYMENT_PROCESS.md
+- ADRs: docs/ADR/*
+- Legacy (read-only): docs/LEGACY/**
+
+# Style & Language
+- TypeScript: "strict": true; no `any`.
+- Python: >=3.11; Ruff + Black; full type hints.
+- Go (if present): gofmt + staticcheck.
+
+# Architecture
+- API-first: Update openapi.yaml BEFORE endpoints.
+- No breaking changes without versioning.
+- ETL is idempotent: upsert + retries + metrics.
+- Service discovery ONLY: Kubernetes DNS (no hard-coded ports/hosts).
+
+# Safety
+- Do NOT modify /legacy/** except minimal exporters/shims.
+- No secrets in repo; use GitHub Secrets/Vault/K8s Secrets.
+- Conflicts with primary docs => BLOCKER REPORT.
+
+# Cursor Behavior
+- Obey docs/instructions.md RUN_PLAYBOOK when “RUN_PLAYBOOK: <mode>” is given.
+- Generate an ADR when in doubt (Pros/Cons/Decision).
+- Always add tests with code changes.
+
+# Testing thresholds
+- services/api-gateway & services/etl: >=85% statements.
+- Parsers/normalizers: >=95% branch.
+- Contract tests must pass against openapi.yaml.
+
+# Code Reuse & Legacy Integration
+- Prefer adapting legacy over rewriting.
+- Validate with maintainer before building net-new features.
+- Record exclusions in docs/REFERENCE/omitted.md.
+
+# Pre-PR Gate (must pass)
+- Lint/Type: ruff, black --check, eslint, tsc --noEmit, go vet/staticcheck (if Go).
+- Tests: unit + contract (OpenAPI) + ETL data checks.
+- DB: Alembic migration + downgrade (if schema touched).
+- Docs: openapi.yaml (if API), CHANGELOG, ADR (if decision changed).
+- Build images; K8s dry-run apply for dev manifests (if manifests changed).
+
+# Commit messages
+- Conventional Commits: feat:, fix:, chore:, refactor:, test:, docs:, ci:.
+
+# RUN_PLAYBOOK invocation rule
+- On “RUN_PLAYBOOK: continue|micro <target>|recovery|pre-pr”, execute procedures in docs/instructions.md; stop at first failed checklist and output a BLOCKER REPORT.

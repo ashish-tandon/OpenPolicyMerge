@@ -1,0 +1,53 @@
+# Cursor Global Rules — OpenPolicy Monorepo
+
+# Scope of Truth (priority order)
+- Primary: docs/UNIFIED_SERVICE_REFERENCE.md
+- Process: docs/instructions.md  # contains RUN_PLAYBOOK
+- Architecture: docs/architecture.md  # includes current diagram
+- Deployment: docs/DEPLOYMENT_PROCESS.md
+- ADRs: docs/ADR/*
+- Legacy (read-only): docs/LEGACY/**
+
+# Style & Language
+- TypeScript: "strict": true; no `any`; model domain types.
+- Python: >=3.11; Ruff + Black; exhaustive type hints; prefer pure functions.
+- Go (if present): gofmt + staticcheck; narrow interfaces; return errors.
+
+# Architecture
+- API-first: Update openapi.yaml BEFORE implementing endpoints.
+- No breaking changes: add fields behind flags or new versions.
+- ETL is idempotent: loaders upsert; retries; metrics.
+- Service discovery only: NO hard-coded hosts/ports. Resolve via the pattern defined in UNIFIED_SERVICE_REFERENCE.md.
+
+# Safety
+- Do NOT modify /legacy/** except minimal exporters/shims.
+- Never commit secrets; use .env + GitHub Secrets/Vault.
+- If a file in /docs conflicts with the primary doc, stop and raise a BLOCKER REPORT.
+
+# Cursor Behavior
+- Obey docs/instructions.md RUN_PLAYBOOK exactly when user types: “RUN_PLAYBOOK: <mode>”.
+- When in doubt, generate a brief ADR (Pros/Cons/Decision).
+- Always include unit tests with code changes.
+
+# Testing thresholds
+- services/api-gateway & services/etl: >=85% statements.
+- Parsers/normalizers: >=95% branch.
+- Contract tests must pass against openapi.yaml.
+
+# Code Reuse & Legacy Integration
+- Check legacy first; adapt instead of rewriting.
+- Validate with maintainer before building anything that might exist already.
+- All exclusions recorded in docs/REFERENCE/omitted.md.
+
+# Pre-PR Gate (must pass)
+- Lint/Type: ruff, black --check, eslint, tsc --noEmit, go vet/staticcheck (if Go).
+- Tests: unit + contract (OpenAPI) + ETL data checks.
+- DB: Alembic migration + downgrade (if schema touched).
+- Docs updated: openapi.yaml (if API), CHANGELOG, ADR (if decision changed).
+- Container: clean build + tests.
+
+# Commit messages
+- Conventional Commits: feat:, fix:, chore:, refactor:, test:, docs:, ci:.
+
+# RUN_PLAYBOOK invocation rule
+- When user types “RUN_PLAYBOOK: continue|micro <target>|recovery|pre-pr”, execute the corresponding procedure in docs/instructions.md and stop at first failed checklist with a BLOCKER REPORT.

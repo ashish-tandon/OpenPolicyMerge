@@ -96,15 +96,12 @@ DATA_TRANSFORMATION_DURATION = Summary(
 def setup_monitoring():
     """Setup monitoring and observability."""
     
-    if not settings.monitoring.enabled:
-        return
-    
-    # Setup OpenTelemetry tracing
-    if settings.monitoring.opentelemetry_enabled:
+    # Setup OpenTelemetry if enabled
+    if settings.monitoring.enabled:
         setup_tracing()
     
-    # Setup Prometheus metrics
-    if settings.monitoring.prometheus_enabled:
+    # Setup Prometheus metrics if enabled
+    if settings.monitoring.enabled:
         setup_prometheus()
     
     print("✅ Monitoring initialized successfully")

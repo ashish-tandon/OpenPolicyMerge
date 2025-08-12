@@ -1,0 +1,248 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: policy-service
+  namespace: openpolicy-dev
+  labels:
+    app: policy-service
+    version: v1.0.0
+    environment: development
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: policy-service
+  template:
+    metadata:
+      labels:
+        app: policy-service
+        version: v1.0.0
+        environment: development
+    spec:
+      containers:
+      - name: policy-service
+        image: openpolicy/policy-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: openpolicy-db-secret
+              key: database-url
+        - name: OPA_URL
+          value: "http://opa-service:8181"
+        - name: AUTH_SERVICE_URL
+          value: "http://auth-service:8000"
+        - name: SEARCH_SERVICE_URL
+          value: "http://search-service:8000"
+        - name: CONFIG_SERVICE_URL
+          value: "http://config-service:8000"
+        - name: MONITORING_SERVICE_URL
+          value: "http://monitoring-service:8000"
+        - name: NOTIFICATION_SERVICE_URL
+          value: "http://notification-service:8000"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: ENVIRONMENT
+          value: "development"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 30
+        volumeMounts:
+        - name: policy-config
+          mountPath: /app/config
+          readOnly: true
+        - name: policy-logs
+          mountPath: /app/logs
+      volumes:
+      - name: policy-config
+        configMap:
+          name: policy-service-config
+      - name: policy-logs
+        emptyDir: {}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: policy-service
+  namespace: openpolicy-dev
+  labels:
+    app: policy-service
+    environment: development
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: policy-service
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: policy-service-config
+  namespace: openpolicy-dev
+  labels:
+    app: policy-service
+    environment: development
+data:
+  policy-config.yaml: |
+    # Policy Service Configuration
+    policy:
+      default_mode: "strict"
+      evaluation_timeout: 30
+      max_concurrent_evaluations: 100
+      cache_enabled: true
+      cache_ttl: 300
+    
+    opa:
+      url: "http://opa-service:8181"
+      timeout: 30
+      retry_attempts: 3
+      health_check_interval: 60
+    
+    logging:
+      level: "INFO"
+      format: "json"
+      output: "stdout"
+    
+    metrics:
+      enabled: true
+      port: 8000
+      path: "/metrics"
+    
+    security:
+      cors_origins: ["*"]
+      rate_limit_enabled: true
+      rate_limit_requests: 100
+      rate_limit_window: 60
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: policy-service-hpa
+  namespace: openpolicy-dev
+  labels:
+    app: policy-service
+    environment: development
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: policy-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: policy-service-ingress
+  namespace: openpolicy-dev
+  labels:
+    app: policy-service
+    environment: development
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - policy-service.dev.openpolicy.local
+    secretName: policy-service-tls
+  rules:
+  - host: policy-service.dev.openpolicy.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: policy-service
+            port:
+              number: 8000
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: policy-service-pdb
+  namespace: openpolicy-dev
+  labels:
+    app: policy-service
+    environment: development
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: policy-service

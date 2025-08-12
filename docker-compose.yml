@@ -47,7 +47,7 @@ services:
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/openpolicy
       - REDIS_URL=redis://redis:6379/1
       - ENVIRONMENT=development
-      - LOG_LEVEL=info
+      - LOG_LEVEL=INFO
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,6 +68,45 @@ services:
       retries: 3
       start_period: 40s
 
+  # ETL Service
+  etl-service:
+    build:
+      context: ./services/etl
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=openpolicy
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - API_HOST=0.0.0.0
+      - API_PORT=8003
+      - ENVIRONMENT=development
+      - LOG_LEVEL=INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/etl:/app
+      - ./data:/app/data
+      - etl_data:/app/data
+      - etl_logs:/app/logs
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   # API Gateway Service (placeholder)
   api-gateway:
     image: nginx:alpine
@@ -78,6 +117,7 @@ services:
       - NGINX_PORT=80
     depends_on:
       - scraper-service
+      - etl-service
     networks:
       - openpolicy-network
     command: >
@@ -90,6 +130,8 @@ volumes:
   redis_data:
   scraper_data:
   scraper_logs:
+  etl_data:
+  etl_logs:
 
 networks:
   openpolicy-network:
