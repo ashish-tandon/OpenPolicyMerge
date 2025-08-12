@@ -1,0 +1,41 @@
+# Core testing framework
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.1
+pytest-asyncio>=0.21.1
+pytest-xdist>=3.3.1
+
+# HTTP testing and mocking
+pytest-vcr>=1.0.2
+responses>=0.23.3
+httpx>=0.25.0
+
+# FastAPI testing
+fastapi[testing]>=0.104.0
+
+# Django testing (for OpenParliament legacy tests)
+django>=4.2.0
+djangorestframework>=3.14.0
+
+# Test utilities
+freezegun>=1.2.2
+factory-boy>=3.3.0
+faker>=20.1.0
+
+# Django pytest integration
+pytest-django>=4.5.2
+pytest-postgresql>=4.1.1
+
+# Performance testing
+pytest-benchmark>=4.0.0
+
+# Code quality and formatting
+black>=23.9.1
+ruff>=0.1.6
+mypy>=1.6.1
+
+# Coverage reporting
+coverage>=7.3.2
+
+# Additional testing tools
+pytest-html>=4.1.1

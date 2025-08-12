@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  mobile-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openpolicy-mobile-api
+    ports:
+      - "8082:8082"
+    environment:
+      - NODE_ENV=production
+      - PORT=8082
+      - HOST=0.0.0.0
+      - MONGODB_URI=mongodb://mongodb:27017/openpolicy_mobile
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - DATA_SERVICE_URL=${DATA_SERVICE_URL:-http://data-service:8000}
+      - SEARCH_SERVICE_URL=${SEARCH_SERVICE_URL:-http://search-service:8001}
+      - ADMIN_SERVICE_URL=${ADMIN_SERVICE_URL:-http://admin-service:8002}
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+
+  mongodb:
+    image: mongo:6.0
+    container_name: openpolicy-mobile-mongodb
+    environment:
+      - MONGO_INITDB_DATABASE=openpolicy_mobile
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-admin123}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+    command: mongod --auth
+
+  redis:
+    image: redis:7-alpine
+    container_name: openpolicy-mobile-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Optional: MongoDB Express for database management
+  mongo-express:
+    image: mongo-express:1.0.0
+    container_name: openpolicy-mobile-mongo-express
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_PASSWORD:-admin123}
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:${MONGO_PASSWORD:-admin123}@mongodb:27017/
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=${MONGO_PASSWORD:-admin123}
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongodb
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+
+  # Optional: Redis Commander for Redis management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: openpolicy-mobile-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8083:8081"
+    depends_on:
+      - redis
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  openpolicy-network:
+    driver: bridge
+    external: true

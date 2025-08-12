@@ -1,0 +1,179 @@
+version: '3.8'
+
+services:
+  etl-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openpolicy-etl-service
+    ports:
+      - "8003:8003"
+    environment:
+      - ENVIRONMENT=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-postgres123}
+      - DB_NAME=openpolicy_etl
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - ./data:/app/data
+      - ./temp:/app/temp
+      - ./archive:/app/archive
+      - ./logs:/app/logs
+
+  etl-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openpolicy-etl-worker
+    command: ["celery", "-A", "src.worker.celery_app", "worker", "--loglevel=info"]
+    environment:
+      - ENVIRONMENT=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-postgres123}
+      - DB_NAME=openpolicy_etl
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      - ./temp:/app/temp
+      - ./archive:/app/archive
+      - ./logs:/app/logs
+
+  etl-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openpolicy-etl-scheduler
+    command: ["celery", "-A", "src.worker.celery_app", "beat", "--loglevel=info"]
+    environment:
+      - ENVIRONMENT=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-postgres123}
+      - DB_NAME=openpolicy_etl
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      - ./temp:/app/temp
+      - ./archive:/app/archive
+      - ./logs:/app/logs
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: openpolicy-etl-postgres
+    environment:
+      - POSTGRES_DB=openpolicy_etl
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: openpolicy-etl-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Optional: PostgreSQL admin interface
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: openpolicy-etl-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@openpolicy.com
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin123}
+    ports:
+      - "8084:80"
+    depends_on:
+      - postgres
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+
+  # Optional: Redis admin interface
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: openpolicy-etl-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8085:8081"
+    depends_on:
+      - redis
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+
+  # Optional: Flower for Celery monitoring
+  flower:
+    image: mher/flower:latest
+    container_name: openpolicy-etl-flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    ports:
+      - "8086:5555"
+    depends_on:
+      - redis
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  openpolicy-network:
+    driver: bridge
+    external: true

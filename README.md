@@ -251,10 +251,18 @@ docker-compose -f docker-compose.dev.yml up -d
 
 ## 📚 Documentation
 
-- **API Documentation**: Available at `/docs` (Swagger/OpenAPI)
-- **Architecture**: See `docs/ARCHITECTURE.md`
-- **Database Schema**: See `docs/DATABASE.md`
-- **Deployment Guide**: See `docs/DEPLOYMENT.md`
+**ALL documentation has been consolidated into ONE master document:**
+
+### **📖 [MASTER OPENPOLICY PLATFORM GUIDE](docs/MASTER_OPENPOLICY_PLATFORM_GUIDE.md)**
+
+**This is the SINGLE SOURCE OF TRUTH for everything:**
+- ✅ **Current Status** - What's working and what's not
+- ✅ **Architecture** - Complete system design  
+- ✅ **Migration Plan** - Scraper migration strategy
+- ✅ **Next Steps** - Clear direction forward
+- ✅ **All Technical Details** - In one place
+
+**NO MORE DOCUMENT CHAOS - USE ONLY THE MASTER GUIDE!**
 
 ## 🤝 Contributing
 

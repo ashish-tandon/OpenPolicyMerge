@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "name": "Rona Ambrose",
+    "riding": "Vancouver Centre",
+    "party": "Conservative",
+    "current": false,
+    "start_date": "2015-10-19",
+    "end_date": "2019-10-21"
+  },
+  {
+    "id": 2,
+    "name": "Hedy Fry",
+    "riding": "Vancouver Centre",
+    "party": "Liberal",
+    "current": true,
+    "start_date": "1993-10-25",
+    "end_date": null
+  },
+  {
+    "id": 3,
+    "name": "Frank McKenna",
+    "riding": "Moncton",
+    "party": "Liberal",
+    "current": false,
+    "start_date": "1993-10-25",
+    "end_date": "1997-06-02"
+  }
+]

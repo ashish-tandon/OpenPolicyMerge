@@ -1,0 +1,368 @@
+# OpenPolicy Platform Helm Chart Values
+# This file contains all configurable values for the OpenPolicy platform
+
+# Global configuration
+global:
+  environment: production
+  imageRegistry: ghcr.io/your-org
+  imagePullSecrets: []
+  storageClass: ""
+  domain: openpolicy.local
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    tls:
+      - secretName: openpolicy-tls
+        hosts:
+          - openpolicy.local
+          - api.openpolicy.local
+          - admin.openpolicy.local
+
+# Image configuration
+images:
+  apiGateway:
+    repository: api-gateway
+    tag: latest
+    pullPolicy: IfNotPresent
+  etl:
+    repository: etl-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  web:
+    repository: web-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  admin:
+    repository: admin-interface
+    tag: latest
+    pullPolicy: IfNotPresent
+  scraper:
+    repository: scraper-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  policy:
+    repository: policy-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  search:
+    repository: search-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  auth:
+    repository: auth-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  notifications:
+    repository: notification-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  config:
+    repository: config-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  health:
+    repository: health-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  monitoring:
+    repository: monitoring-service
+    tag: latest
+    pullPolicy: IfNotPresent
+
+# Service configuration
+services:
+  apiGateway:
+    enabled: true
+    replicas: 2
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    port: 8080
+    serviceType: ClusterIP
+    healthCheck:
+      path: /healthz
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+  etl:
+    enabled: true
+    replicas: 2
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    port: 8003
+    serviceType: ClusterIP
+
+  web:
+    enabled: true
+    replicas: 2
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+    port: 3000
+    serviceType: ClusterIP
+
+  admin:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+    port: 3001
+    serviceType: ClusterIP
+
+  scraper:
+    enabled: true
+    replicas: 3
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+    port: 8005
+    serviceType: ClusterIP
+    config:
+      maxConcurrentScrapers: 10
+      defaultTimeout: 300
+      retryAttempts: 3
+
+  policy:
+    enabled: true
+    replicas: 2
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    port: 8011
+    serviceType: ClusterIP
+
+  search:
+    enabled: true
+    replicas: 2
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+    port: 8010
+    serviceType: ClusterIP
+
+  auth:
+    enabled: true
+    replicas: 2
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    port: 8009
+    serviceType: ClusterIP
+
+  notifications:
+    enabled: true
+    replicas: 2
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    port: 8012
+    serviceType: ClusterIP
+
+  config:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+    port: 8013
+    serviceType: ClusterIP
+
+  health:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+    port: 8007
+    serviceType: ClusterIP
+
+  monitoring:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    port: 8015
+    serviceType: ClusterIP
+
+# Database configuration
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "openpolicy123"
+    database: "openpolicy"
+  primary:
+    persistence:
+      enabled: true
+      size: 50Gi
+      storageClass: ""
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+  metrics:
+    enabled: true
+
+# Redis configuration
+redis:
+  enabled: true
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: ""
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    retention: 30d
+    storageSize: 10Gi
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+  grafana:
+    enabled: true
+    adminPassword: "admin123"
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: ""
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+# Security configuration
+security:
+  podSecurityContext:
+    fsGroup: 1000
+    runAsUser: 1000
+    runAsNonRoot: true
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+    capabilities:
+      drop:
+        - ALL
+
+# Network policies
+networkPolicies:
+  enabled: true
+  defaultDeny: false
+
+# Horizontal Pod Autoscaler
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Pod Disruption Budget
+pdb:
+  enabled: true
+  minAvailable: 1
+
+# Affinity and anti-affinity
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - openpolicy
+          topologyKey: kubernetes.io/hostname
+
+# Tolerations
+tolerations: []
+
+# Node selectors
+nodeSelector: {}
+
+# Annotations
+annotations: {}
+
+# Labels
+labels: {}

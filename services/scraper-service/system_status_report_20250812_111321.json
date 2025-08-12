@@ -1,0 +1,56 @@
+{
+  "timestamp": "2025-08-12T11:13:20.786498",
+  "system": "OpenPolicy Scraper Service",
+  "version": "1.0.0",
+  "database_health": {
+    "table_counts": {
+      "scraper_info": 3,
+      "scraper_jobs": 12,
+      "scraper_logs": 18,
+      "data_collection": 20,
+      "analytics_summary": 30
+    },
+    "scraper_statuses": {
+      "running": 1,
+      "completed": 2
+    },
+    "recent_jobs": {
+      "completed": 6,
+      "running": 6
+    },
+    "database_healthy": true
+  },
+  "system_resources": {
+    "cpu_percent": 16.7,
+    "memory": {
+      "total": 68719476736,
+      "available": 27093860352,
+      "percent": 60.6
+    },
+    "disk": {
+      "total": 1995218165760,
+      "used": 11262541824,
+      "free": 1278293188608,
+      "percent": 0.5644767082255377
+    },
+    "network": {
+      "bytes_sent": 1758943232,
+      "bytes_recv": 1308236800
+    }
+  },
+  "coverage_status": {
+    "coverage_percentage": 84.78926300918296,
+    "total_lines": 4247,
+    "covered_lines": 3601,
+    "meets_threshold": false,
+    "threshold": 85.0,
+    "modules_count": 22
+  },
+  "service_status": {
+    "scraper_manager": "available",
+    "data_pipeline": "available",
+    "etl_service": "available",
+    "performance_monitor": "available",
+    "coverage_validator": "available"
+  }
+}

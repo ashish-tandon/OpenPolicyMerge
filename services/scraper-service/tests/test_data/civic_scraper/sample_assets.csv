@@ -1,0 +1,5 @@
+place,place_name,asset_type,date,committee,url,content_length,file_type
+nashcounty,Nash County,agenda,2020-05-04,test-committee,http://nc-nashcounty.civicplus.com/AgendaCenter/ViewFile/Agenda/_05042020-381,1024,pdf
+nashcounty,Nash County,minutes,2020-05-04,test-committee,http://nc-nashcounty.civicplus.com/AgendaCenter/ViewFile/Minutes/_05042020-381,2048,pdf
+testcity,Test City,agenda,2020-05-05,planning-commission,https://example.com/agenda.pdf,512,pdf
+testcity,Test City,minutes,2020-05-05,planning-commission,https://example.com/minutes.pdf,1536,pdf
