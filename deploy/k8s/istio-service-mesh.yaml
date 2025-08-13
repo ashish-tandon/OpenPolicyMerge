@@ -1,0 +1,127 @@
+---
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: openpolicy-gateway
+  namespace: openpolicy-platform
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: openpolicy-vs
+  namespace: openpolicy-platform
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - openpolicy-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /api
+    route:
+    - destination:
+        host: api-gateway
+        port:
+          number: 9001
+  - match:
+    - uri:
+        prefix: /policy
+    route:
+    - destination:
+        host: policy-service
+        port:
+          number: 9001
+  - match:
+    - uri:
+        prefix: /search
+    route:
+    - destination:
+        host: search-service
+        port:
+          number: 9002
+  - match:
+    - uri:
+        prefix: /notifications
+    route:
+    - destination:
+        host: notification-service
+        port:
+          number: 9004
+  - match:
+    - uri:
+        prefix: /errors
+    route:
+    - destination:
+        host: error-reporting-service
+        port:
+          number: 9024
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: openpolicy-destination-rules
+  namespace: openpolicy-platform
+spec:
+  host: "*.openpolicy-platform.svc.cluster.local"
+  trafficPolicy:
+    loadBalancer:
+      simple: ROUND_ROBIN
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 30ms
+      http:
+        http1MaxPendingRequests: 1024
+        maxRequestsPerConnection: 10
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 10s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 10
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: openpolicy-auth-policy
+  namespace: openpolicy-platform
+spec:
+  selector:
+    matchLabels:
+      app: api-gateway
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/openpolicy-platform/sa/default"]
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+        paths: ["/healthz", "/health", "/api/*"]
+---
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: openpolicy-telemetry
+  namespace: openpolicy-platform
+spec:
+  tracing:
+  - randomSamplingPercentage: 10.0
+  metrics:
+  - providers:
+    - name: prometheus
+    overrides:
+    - match:
+        metric: REQUEST_COUNT
+      tagOverrides:
+        response_code:
+          operation: UPSERT

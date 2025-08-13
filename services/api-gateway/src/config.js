@@ -1,148 +1,154 @@
-/**
- * Configuration for the OpenPolicy API Gateway
- */
+// API Gateway Configuration with Service Discovery
+// This file configures the API Gateway to route traffic to all OpenPolicy services
 
 const config = {
   // Server Configuration
   server: {
-    port: process.env.GATEWAY_PORT || 8000,
+    port: process.env.GATEWAY_PORT || 9009,
     host: process.env.GATEWAY_HOST || '0.0.0.0',
-    environment: process.env.NODE_ENV || 'development',
-    cors: {
-      origin: process.env.CORS_ORIGIN?.split(',') || ['*'],
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Request-ID']
-    }
+    environment: process.env.ENVIRONMENT || 'development',
+    logLevel: process.env.LOG_LEVEL || 'info'
   },
 
-  // Authentication & Security
-  auth: {
-    jwtSecret: process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production',
-    jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
-    bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS) || 12,
-    rateLimit: {
-      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-      max: parseInt(process.env.RATE_LIMIT_MAX) || 100, // limit each IP to 100 requests per windowMs
-      message: 'Too many requests from this IP, please try again later.',
-      standardHeaders: true,
-      legacyHeaders: false
-    }
-  },
-
-  // Service Discovery & Routing
+  // Service Discovery Configuration
   services: {
-    // Main Web Application
-    webApp: {
-      name: 'web-app',
-      url: process.env.WEB_APP_URL || 'http://localhost:8001',
-      healthCheck: '/healthz',
-      timeout: 30000,
-      circuitBreaker: {
-        failureThreshold: 5,
-        recoveryTimeout: 60000,
-        expectedStatus: [200, 201, 204]
-      }
+    // Core Services
+    policy: {
+      name: 'Policy Service',
+      url: process.env.POLICY_SERVICE_URL || 'http://localhost:9001',
+      healthEndpoint: '/healthz',
+      routes: ['/api/policy/*', '/api/policies/*']
     },
-
-    // Admin Dashboard
-    adminDashboard: {
-      name: 'admin-dashboard',
-      url: process.env.ADMIN_DASHBOARD_URL || 'http://localhost:8002',
-      healthCheck: '/healthz',
-      timeout: 30000,
-      circuitBreaker: {
-        failureThreshold: 5,
-        recoveryTimeout: 60000,
-        expectedStatus: [200, 201, 204]
-      }
+    
+    search: {
+      name: 'Search Service',
+      url: process.env.SEARCH_SERVICE_URL || 'http://localhost:9002',
+      healthEndpoint: '/healthz',
+      routes: ['/api/search/*', '/api/query/*']
     },
-
-    // Mobile API Service
-    mobileApi: {
-      name: 'mobile-api',
-      url: process.env.MOBILE_API_URL || 'http://localhost:8002',
-      healthCheck: '/healthz',
-      timeout: 30000,
-      circuitBreaker: {
-        failureThreshold: 5,
-        recoveryTimeout: 60000,
-        expectedStatus: [200, 201, 204]
-      }
+    
+    auth: {
+      name: 'Auth Service',
+      url: process.env.AUTH_SERVICE_URL || 'http://localhost:9003',
+      healthEndpoint: '/healthz',
+      routes: ['/api/auth/*', '/api/users/*', '/api/login', '/api/register']
     },
-
-    // ETL Service
-    etlService: {
-      name: 'etl-service',
-      url: process.env.ETL_SERVICE_URL || 'http://localhost:8003',
-      healthCheck: '/healthz',
-      timeout: 30000,
-      circuitBreaker: {
-        failureThreshold: 5,
-        recoveryTimeout: 60000,
-        expectedStatus: [200, 201, 204]
-      }
+    
+    notification: {
+      name: 'Notification Service',
+      url: process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:9004',
+      healthEndpoint: '/healthz',
+      routes: ['/api/notifications/*', '/api/email/*', '/api/sms/*']
     },
-
-    // Go API Server
-    goApi: {
-      name: 'go-api',
-      url: process.env.GO_API_URL || 'http://localhost:8080',
-      healthCheck: '/api/v1/health',
-      timeout: 30000,
-      circuitBreaker: {
-        failureThreshold: 5,
-        recoveryTimeout: 60000,
-        expectedStatus: [200, 201, 204]
-      }
+    
+    config: {
+      name: 'Config Service',
+      url: process.env.CONFIG_SERVICE_URL || 'http://localhost:9005',
+      healthEndpoint: '/healthz',
+      routes: ['/api/config/*', '/api/settings/*']
     },
-
-    // Legacy Django Backend
-    djangoBackend: {
-      name: 'django-backend',
-      url: process.env.DJANGO_BACKEND_URL || 'http://localhost:8001',
-      healthCheck: '/healthz',
-      timeout: 30000,
-      circuitBreaker: {
-        failureThreshold: 5,
-        recoveryTimeout: 60000,
-        expectedStatus: [200, 201, 204]
-      }
+    
+    health: {
+      name: 'Health Service',
+      url: process.env.HEALTH_SERVICE_URL || 'http://localhost:9006',
+      healthEndpoint: '/healthz',
+      routes: ['/api/health/*', '/api/status/*']
     },
-
-    // Legacy Laravel Backend
-    laravelBackend: {
-      name: 'laravel-backend',
-      url: process.env.LARAVEL_BACKEND_URL || 'http://localhost:8002',
-      healthCheck: '/healthz',
-      timeout: 30000,
-      circuitBreaker: {
-        failureThreshold: 5,
-        recoveryTimeout: 60000,
-        expectedStatus: [200, 201, 204]
-      }
+    
+    etl: {
+      name: 'ETL Service',
+      url: process.env.ETL_SERVICE_URL || 'http://localhost:9007',
+      healthEndpoint: '/healthz',
+      routes: ['/api/etl/*', '/api/data/*', '/api/process/*']
+    },
+    
+    scraper: {
+      name: 'Scraper Service',
+      url: process.env.SCRAPER_SERVICE_URL || 'http://localhost:9008',
+      healthEndpoint: '/healthz',
+      routes: ['/api/scraper/*', '/api/scrape/*', '/api/jurisdictions/*']
+    },
+    
+    monitoring: {
+      name: 'Monitoring Service',
+      url: process.env.MONITORING_SERVICE_URL || 'http://localhost:9010',
+      healthEndpoint: '/healthz',
+      routes: ['/api/monitoring/*', '/api/metrics/*', '/api/alerts/*']
+    },
+    
+    plotly: {
+      name: 'Plotly Service',
+      url: process.env.PLOTLY_SERVICE_URL || 'http://localhost:9011',
+      healthEndpoint: '/healthz',
+      routes: ['/api/plotly/*', '/api/charts/*', '/api/visualizations/*']
+    },
+    
+    mcp: {
+      name: 'MCP Service',
+      url: process.env.MCP_SERVICE_URL || 'http://localhost:9012',
+      healthEndpoint: '/healthz',
+      routes: ['/api/mcp/*', '/api/model/*', '/api/context/*']
     }
+  },
+
+  // Frontend Services
+  frontend: {
+    web: {
+      name: 'Web Frontend',
+      url: process.env.WEB_FRONTEND_URL || 'http://localhost:3000',
+      healthEndpoint: '/',
+      routes: ['/web/*', '/frontend/*']
+    },
+    
+    mobile: {
+      name: 'Mobile API',
+      url: process.env.MOBILE_API_URL || 'http://localhost:8081',
+      healthEndpoint: '/',
+      routes: ['/mobile/*', '/app/*']
+    },
+    
+    admin: {
+      name: 'Admin Dashboard',
+      url: process.env.ADMIN_DASHBOARD_URL || 'http://localhost:3001',
+      healthEndpoint: '/',
+      routes: ['/admin/*', '/dashboard/*']
+    }
+  },
+
+  // Security Configuration
+  security: {
+    jwtSecret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+    jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
+    rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX) || 100,
+    rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
+    corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['*']
   },
 
   // Database Configuration
   database: {
-    mongodb: {
-      uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/openpolicy_gateway',
-      options: {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        maxPoolSize: 10,
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000
-      }
+    postgres: {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT) || 5432,
+      username: process.env.DB_USERNAME || 'postgres',
+      password: process.env.DB_PASSWORD || 'password',
+      database: process.env.DB_NAME || 'openpolicy'
     },
+    
     redis: {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT) || 6379,
-      password: process.env.REDIS_PASSWORD || null,
-      db: parseInt(process.env.REDIS_DB) || 0,
-      maxRetriesPerRequest: 3,
-      retryDelayOnFailover: 100
+      url: process.env.REDIS_URL || 'redis://localhost:6379/1'
+    }
+  },
+
+  // Monitoring Configuration
+  monitoring: {
+    prometheus: {
+      enabled: process.env.PROMETHEUS_ENABLED === 'true',
+      port: parseInt(process.env.PROMETHEUS_PORT) || 9090
+    },
+    
+    healthCheck: {
+      interval: parseInt(process.env.HEALTH_CHECK_INTERVAL) || 30000,
+      timeout: parseInt(process.env.HEALTH_CHECK_TIMEOUT) || 5000
     }
   },
 
@@ -150,73 +156,8 @@ const config = {
   logging: {
     level: process.env.LOG_LEVEL || 'info',
     format: process.env.LOG_FORMAT || 'json',
-    transports: ['console', 'file'],
-    file: {
-      filename: process.env.LOG_FILE || 'logs/api-gateway.log',
-      maxSize: process.env.LOG_MAX_SIZE || '10m',
-      maxFiles: parseInt(process.env.LOG_MAX_FILES) || 5
-    }
-  },
-
-  // Monitoring Configuration
-  monitoring: {
-    enabled: process.env.MONITORING_ENABLED !== 'false',
-    prometheus: {
-      enabled: process.env.PROMETHEUS_ENABLED !== 'false',
-      port: parseInt(process.env.PROMETHEUS_PORT) || 9090
-    },
-    healthCheck: {
-      interval: parseInt(process.env.HEALTH_CHECK_INTERVAL) || 30000, // 30 seconds
-      timeout: parseInt(process.env.HEALTH_CHECK_TIMEOUT) || 10000   // 10 seconds
-    }
-  },
-
-  // API Documentation
-  swagger: {
-    enabled: process.env.SWAGGER_ENABLED !== 'false',
-    title: 'OpenPolicy API Gateway',
-    version: '1.0.0',
-    description: 'Unified API Gateway for OpenPolicy Platform',
-    contact: {
-      name: 'OpenPolicy Team',
-      email: 'team@openpolicy.com'
-    }
-  },
-
-  // Feature Flags
-  features: {
-    authentication: process.env.FEATURE_AUTH !== 'false',
-    rateLimiting: process.env.FEATURE_RATE_LIMITING !== 'false',
-    circuitBreaker: process.env.FEATURE_CIRCUIT_BREAKER !== 'false',
-    caching: process.env.FEATURE_CACHING !== 'false',
-    monitoring: process.env.FEATURE_MONITORING !== 'false',
-    logging: process.env.FEATURE_LOGGING !== 'false'
-  },
-
-  // Cache Configuration
-  cache: {
-    ttl: parseInt(process.env.CACHE_TTL) || 300, // 5 minutes
-    checkPeriod: parseInt(process.env.CACHE_CHECK_PERIOD) || 600, // 10 minutes
-    maxKeys: parseInt(process.env.CACHE_MAX_KEYS) || 1000
-  },
-
-  // Proxy Configuration
-  proxy: {
-    timeout: parseInt(process.env.PROXY_TIMEOUT) || 30000,
-    followRedirects: process.env.PROXY_FOLLOW_REDIRECTS !== 'false',
-    changeOrigin: process.env.PROXY_CHANGE_ORIGIN !== 'false',
-    secure: process.env.PROXY_SECURE !== 'false'
+    output: process.env.LOG_OUTPUT || 'stdout'
   }
 };
-
-// Environment-specific overrides
-if (config.server.environment === 'production') {
-  config.auth.jwtSecret = process.env.JWT_SECRET;
-  config.logging.level = 'warn';
-  config.features.swagger = false;
-} else if (config.server.environment === 'test') {
-  config.database.mongodb.uri = process.env.TEST_MONGODB_URI || 'mongodb://localhost:27017/openpolicy_gateway_test';
-  config.database.redis.db = parseInt(process.env.TEST_REDIS_DB) || 1;
-}
 
 module.exports = config;

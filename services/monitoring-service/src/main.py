@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from fastapi.responses import Response
+from .config import Config
 
 app = FastAPI(title="Monitoring Service", version="1.0.0")
 
@@ -47,3 +48,13 @@ async def system_status():
             "api-gateway": "healthy"
         }
     }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=Config.SERVICE_PORT,
+        reload=True,
+        log_level="info"
+    )

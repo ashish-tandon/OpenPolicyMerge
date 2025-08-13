@@ -1,0 +1,37 @@
+# OPA Service (Open Policy Agent) Dependencies
+
+# Core Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.10.0
+pydantic-settings>=2.2.0
+
+# OPA Integration
+requests>=2.32.0
+httpx>=0.28.0
+
+# Database & Storage
+sqlalchemy>=2.0.30
+psycopg2-binary>=2.9.10
+redis>=5.0.2
+alembic>=1.13.0
+
+# Policy Management
+pyyaml>=6.0.1
+toml>=0.10.2
+
+# Authentication & Security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Monitoring & Logging
+loguru>=0.7.2
+structlog>=24.1.0
+prometheus-client>=0.20.0
+
+# Development & Testing
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
+black>=24.1.0
+isort>=5.13.0
+flake8>=7.0.0

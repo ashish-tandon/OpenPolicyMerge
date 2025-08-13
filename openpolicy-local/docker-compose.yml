@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  postgresql:
+    image: postgres:15
+    container_name: openpolicy-postgres-local
+    environment:
+      POSTGRES_DB: openpolicy
+      POSTGRES_USER: openpolicy
+      POSTGRES_PASSWORD: openpolicy123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openpolicy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - openpolicy-local
+
+  redis:
+    image: redis:7-alpine
+    container_name: openpolicy-redis-local
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - openpolicy-local
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: openpolicy-rabbitmq-local
+    environment:
+      RABBITMQ_DEFAULT_USER: openpolicy
+      RABBITMQ_DEFAULT_PASS: openpolicy123
+    ports:
+      - "5672:5672"      # AMQP port
+      - "15672:15672"    # Management UI port
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - openpolicy-local
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+
+networks:
+  openpolicy-local:
+    driver: bridge

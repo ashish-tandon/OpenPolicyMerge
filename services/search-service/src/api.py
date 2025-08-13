@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime
 
 from .models import SearchIndex, SearchQuery, SearchSuggestion
-from .database import get_db_session
+from .database import get_session as get_db_session
 from .search_engine import SearchEngine
 from .service_client import ServiceClient
 

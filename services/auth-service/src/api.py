@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime, timedelta
 
 from .models import User, Role, UserRole, UserSession
-from .database import get_db_session
+from .database import get_session as get_db_session
 from .auth_manager import AuthManager
 from .service_client import ServiceClient
 

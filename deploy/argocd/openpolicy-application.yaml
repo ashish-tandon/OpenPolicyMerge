@@ -1,0 +1,55 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: openpolicy-platform
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/OpenPolicyMerge.git
+    targetRevision: main
+    path: deploy/k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openpolicy-platform
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+  revisionHistoryLimit: 10
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+      jsonPointers:
+        - /spec/minReplicas
+        - /spec/maxReplicas
+  healthChecks:
+    - group: apps
+      kind: Deployment
+      name: api-gateway
+      namespace: openpolicy-platform
+    - group: apps
+      kind: Deployment
+      name: error-reporting-service
+      namespace: openpolicy-platform
+  info:
+    - name: Description
+      value: OpenPolicy Platform - Complete Microservices Architecture
+    - name: Services
+      value: "25"
+    - name: Compliance
+      value: "96%"
+    - name: Environment
+      value: "Production"
+    - name: Architecture
+      value: "Kubernetes + Service Mesh + CI/CD"

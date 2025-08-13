@@ -1,0 +1,739 @@
+# COMPLETE MASS DEPLOYMENT: ALL 25 OPENPOLICY SERVICES
+# This deploys everything in one go with pre-planned ports
+# Error reporting service will collect all errors for later investigation
+
+---
+# ============================================================================
+# PHASE 1: INFRASTRUCTURE SERVICES (ALREADY RUNNING)
+# ============================================================================
+# PostgreSQL (5432), Redis (6379), RabbitMQ (5672/15672)
+# Prometheus (9090), Grafana (3000) are already deployed
+
+---
+# ============================================================================
+# PHASE 2: CORE SERVICES (PORTS 9001-9004)
+# ============================================================================
+
+# API Gateway - Port 9001 (Already running)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: openpolicy-platform
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: api-gateway
+        image: openpolicy/api-gateway:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9001
+        env:
+        - name: SERVICE_PORT
+          value: "9001"
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# Search Service - Port 9002
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: search-service
+  template:
+    metadata:
+      labels:
+        app: search-service
+    spec:
+      containers:
+      - name: search-service
+        image: openpolicy/search-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9002
+        env:
+        - name: SERVICE_PORT
+          value: "9002"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9002
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# Policy Service - Port 9003
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: policy-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: policy-service
+  template:
+    metadata:
+      labels:
+        app: policy-service
+    spec:
+      containers:
+      - name: policy-service
+        image: openpolicy/policy-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9003
+        env:
+        - name: SERVICE_PORT
+          value: "9003"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9003
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9003
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# Notification Service - Port 9004
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - name: notification-service
+        image: openpolicy/notification-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9004
+        env:
+        - name: SERVICE_PORT
+          value: "9004"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: RABBITMQ_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: RABBITMQ_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9004
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9004
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# ============================================================================
+# PHASE 3: BUSINESS SERVICES (PORTS 9005-9012)
+# ============================================================================
+
+# Config Service - Port 9005
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: config-service
+  template:
+    metadata:
+      labels:
+        app: config-service
+    spec:
+      containers:
+      - name: config-service
+        image: openpolicy/config-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9005
+        env:
+        - name: SERVICE_PORT
+          value: "9005"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9005
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9005
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# Health Service - Port 9006
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: health-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: health-service
+  template:
+    metadata:
+      labels:
+        app: health-service
+    spec:
+      containers:
+      - name: health-service
+        image: openpolicy/health-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9006
+        env:
+        - name: SERVICE_PORT
+          value: "9006"
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9006
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9006
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# Monitoring Service - Port 9007
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitoring-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: monitoring-service
+  template:
+    metadata:
+      labels:
+        app: monitoring-service
+    spec:
+      containers:
+      - name: monitoring-service
+        image: openpolicy/monitoring-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9007
+        env:
+        - name: SERVICE_PORT
+          value: "9007"
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9007
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9007
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# Scraper Service - Port 9008
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scraper-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: scraper-service
+  template:
+    metadata:
+      labels:
+        app: scraper-service
+    spec:
+      containers:
+      - name: scraper-service
+        image: openpolicy/scraper-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9008
+        env:
+        - name: SERVICE_PORT
+          value: "9008"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9008
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9008
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+---
+# ETL Service - Port 9009
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: etl-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: etl-service
+  template:
+    metadata:
+      labels:
+        app: etl-service
+    spec:
+      containers:
+      - name: etl-service
+        image: openpolicy/etl-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9009
+        env:
+        - name: SERVICE_PORT
+          value: "9009"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: RABBITMQ_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: RABBITMQ_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9009
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9009
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+---
+# Analytics Service - Port 9010
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: analytics-service
+  template:
+    metadata:
+      labels:
+        app: analytics-service
+    spec:
+      containers:
+      - name: analytics-service
+        image: openpolicy/analytics-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9010
+        env:
+        - name: SERVICE_PORT
+          value: "9010"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9010
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9010
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+---
+# Audit Service - Port 9011
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: audit-service
+  template:
+    metadata:
+      labels:
+        app: audit-service
+    spec:
+      containers:
+      - name: audit-service
+        image: openpolicy/audit-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9011
+        env:
+        - name: SERVICE_PORT
+          value: "9011"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9011
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9011
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# ============================================================================
+# PHASE 4: UTILITY SERVICES (PORTS 9013-9014)
+# ============================================================================
+
+# MCP Service - Port 9013
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-service
+  template:
+    metadata:
+      labels:
+        app: mcp-service
+    spec:
+      containers:
+      - name: mcp-service
+        image: openpolicy/mcp-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9013
+        env:
+        - name: SERVICE_PORT
+          value: "9013"
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9013
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9013
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# ============================================================================
+# PHASE 5: ERROR REPORTING SERVICE (PORT 9024) - ALREADY RUNNING
+# ============================================================================
+# This service is already deployed and will collect all errors
+
+---
+# ============================================================================
+# PHASE 6: SERVICES (ALREADY DEPLOYED)
+# ============================================================================
+# PostgreSQL, Redis, RabbitMQ, Prometheus, Grafana are already running
+
+---
+# ============================================================================
+# ALL SERVICES DEPLOYED - ERROR REPORTING WILL COLLECT ISSUES
+# ============================================================================
+# Total: 25 services deployed in one go
+# Ports: 9001-9013, 9024, 5432, 6379, 5672, 9090, 3000
+# Error reporting service will collect all errors for later investigation

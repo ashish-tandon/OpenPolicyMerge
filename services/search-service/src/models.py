@@ -18,7 +18,7 @@ class SearchIndex(Base):
     title = Column(String(500))
     content = Column(Text)
     summary = Column(Text)
-    metadata = Column(JSON)
+    document_metadata = Column(JSON)
     search_vector = Column(Text)  # Full-text search vector
     relevance_score = Column(Float, default=0.0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

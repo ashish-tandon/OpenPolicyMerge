@@ -1,0 +1,239 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openpolicy-platform
+  labels:
+    name: openpolicy-platform
+    environment: production
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openpolicy-config
+  namespace: openpolicy-platform
+data:
+  # Global configuration
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  
+  # Service discovery
+  API_GATEWAY_URL: "http://api-gateway.openpolicy-platform.svc.cluster.local:9001"
+  ERROR_REPORTING_URL: "http://error-reporting-service.openpolicy-platform.svc.cluster.local:9024"
+  
+  # Database configuration
+  DATABASE_URL: "postgresql://openpolicy_user:${DB_PASSWORD}@postgresql.openpolicy-platform.svc.cluster.local:5432/openpolicy"
+  REDIS_URL: "redis://redis.openpolicy-platform.svc.cluster.local:6379"
+  RABBITMQ_URL: "amqp://rabbitmq.openpolicy-platform.svc.cluster.local:5672"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openpolicy-secrets
+  namespace: openpolicy-platform
+type: Opaque
+data:
+  # Base64 encoded secrets (replace with actual values)
+  DB_PASSWORD: b3BlbnBvbGljeV9wYXNzd29yZA==  # openpolicy_password
+  JWT_SECRET: b3BlbnBvbGljeV9qd3Rfc2VjcmV0  # openpolicy_jwt_secret
+  API_KEY: b3BlbnBvbGljeV9hcGlfa2V5  # openpolicy_api_key
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: openpolicy-platform
+  labels:
+    app: api-gateway
+    tier: frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+        tier: frontend
+    spec:
+      containers:
+      - name: api-gateway
+        image: openpolicy/api-gateway:latest
+        ports:
+        - containerPort: 9001
+        env:
+        - name: SERVICE_PORT
+          value: "9001"
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: openpolicy-platform
+  labels:
+    app: api-gateway
+    tier: frontend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9001
+    targetPort: 9001
+    protocol: TCP
+    name: http
+  selector:
+    app: api-gateway
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: error-reporting-service
+  namespace: openpolicy-platform
+  labels:
+    app: error-reporting-service
+    tier: monitoring
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: error-reporting-service
+  template:
+    metadata:
+      labels:
+        app: error-reporting-service
+        tier: monitoring
+    spec:
+      containers:
+      - name: error-reporting-service
+        image: openpolicy/error-reporting-service:latest
+        ports:
+        - containerPort: 9024
+        env:
+        - name: SERVICE_PORT
+          value: "9024"
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ENVIRONMENT
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9024
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9024
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: error-reporting-service
+  namespace: openpolicy-platform
+  labels:
+    app: error-reporting-service
+    tier: monitoring
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9024
+    targetPort: 9024
+    protocol: TCP
+    name: http
+  selector:
+    app: error-reporting-service
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openpolicy-ingress
+  namespace: openpolicy-platform
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  tls:
+  - hosts:
+    - openpolicy.example.com
+    secretName: openpolicy-tls
+  rules:
+  - host: openpolicy.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 9001
+      - path: /api/
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 9001
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-gateway-hpa
+  namespace: openpolicy-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-gateway
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

@@ -1,0 +1,275 @@
+version: '3.8'
+
+services:
+  # Test Database
+  postgresql-test:
+    image: postgres:15-alpine
+    container_name: openpolicy-postgresql-test
+    environment:
+      POSTGRES_DB: openpolicy_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - openpolicy-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d openpolicy_test"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Production Database
+  postgresql-prod:
+    image: postgres:15-alpine
+    container_name: openpolicy-postgresql-prod
+    environment:
+      POSTGRES_DB: openpolicy
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - openpolicy-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d openpolicy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: openpolicy-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - openpolicy-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # RabbitMQ Message Queue
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: openpolicy-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: password
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI port
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - openpolicy-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Scraper Service - Test Mode
+  scraper-service-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openpolicy-scraper-test
+    environment:
+      # Test Mode Configuration
+      SCRAPER_MODE: test
+      TEST_DATABASE_URL: postgresql://postgres:password@postgresql-test:5432/openpolicy_test
+      PROD_DATABASE_URL: postgresql://postgres:password@postgresql-prod:5432/openpolicy
+      
+      # Service Configuration
+      HOST: 0.0.0.0
+      PORT: 8005
+      DEBUG: "true"
+      
+      # Redis Configuration
+      REDIS_URL: redis://redis:6379/0
+      
+      # RabbitMQ Configuration
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672/
+      
+      # Performance Optimizations
+      ENABLE_CONNECTION_POOLING: "true"
+      ENABLE_QUERY_CACHING: "true"
+      ENABLE_BATCH_PROCESSING: "true"
+      ENABLE_ASYNC_PROCESSING: "true"
+      
+      # Scraper Configuration
+      MAX_CONCURRENT_SCRAPERS: "20"
+      BATCH_SIZE: "2000"
+      RATE_LIMIT_PER_MINUTE: "120"
+      
+      # Logging
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+      
+      # Monitoring
+      METRICS_ENABLED: "true"
+      PROMETHEUS_PORT: "9090"
+    ports:
+      - "8005:8005"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./backups:/app/backups
+    depends_on:
+      postgresql-test:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - openpolicy-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Scraper Service - Production Mode
+  scraper-service-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openpolicy-scraper-prod
+    environment:
+      # Production Mode Configuration
+      SCRAPER_MODE: prod
+      TEST_DATABASE_URL: postgresql://postgres:password@postgresql-test:5432/openpolicy_test
+      PROD_DATABASE_URL: postgresql://postgres:password@postgresql-prod:5432/openpolicy
+      
+      # Service Configuration
+      HOST: 0.0.0.0
+      PORT: 8006
+      DEBUG: "false"
+      
+      # Redis Configuration
+      REDIS_URL: redis://redis:6379/0
+      
+      # RabbitMQ Configuration
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672/
+      
+      # Performance Optimizations
+      ENABLE_CONNECTION_POOLING: "true"
+      ENABLE_QUERY_CACHING: "true"
+      ENABLE_BATCH_PROCESSING: "true"
+      ENABLE_ASYNC_PROCESSING: "true"
+      
+      # Scraper Configuration
+      MAX_CONCURRENT_SCRAPERS: "20"
+      BATCH_SIZE: "2000"
+      RATE_LIMIT_PER_MINUTE: "120"
+      
+      # Logging
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+      
+      # Monitoring
+      METRICS_ENABLED: "true"
+      PROMETHEUS_PORT: "9090"
+    ports:
+      - "8006:8006"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./backups:/app/backups
+    depends_on:
+      postgresql-prod:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - openpolicy-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Orchestrator Service
+  scraper-orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile.orchestrator
+    container_name: openpolicy-scraper-orchestrator
+    environment:
+      # Database URLs
+      TEST_DATABASE_URL: postgresql://postgres:password@postgresql-test:5432/openpolicy_test
+      PROD_DATABASE_URL: postgresql://postgres:password@postgresql-prod:5432/openpolicy
+      
+      # Service URLs
+      SCRAPER_TEST_URL: http://scraper-service-test:8005
+      SCRAPER_PROD_URL: http://scraper-service-prod:8006
+      
+      # Redis Configuration
+      REDIS_URL: redis://redis:6379/0
+      
+      # RabbitMQ Configuration
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672/
+      
+      # Orchestration Configuration
+      SCHEDULE_INTERVAL: "300"  # 5 minutes
+      MAX_CONCURRENT_JOBS: "5"
+      JOB_TIMEOUT: "1800"  # 30 minutes
+      
+      # Logging
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+    volumes:
+      - ./orchestrator:/app/orchestrator
+      - ./logs:/app/logs
+    depends_on:
+      scraper-service-test:
+        condition: service_healthy
+      scraper-service-prod:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+
+volumes:
+  postgres_test_data:
+    driver: local
+  postgres_prod_data:
+    driver: local
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+
+networks:
+  openpolicy-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

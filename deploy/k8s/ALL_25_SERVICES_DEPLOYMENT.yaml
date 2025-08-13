@@ -1,0 +1,954 @@
+# MASS DEPLOYMENT: ALL 25 OPENPOLICY SERVICES
+# This deploys everything in one go, just like local execution
+
+---
+# ============================================================================
+# PHASE 1: INFRASTRUCTURE SERVICES (ALREADY RUNNING)
+# ============================================================================
+# PostgreSQL, Redis, RabbitMQ, Prometheus, Grafana are already deployed
+
+---
+# ============================================================================
+# PHASE 2: CORE BUSINESS SERVICES (FIXED PORTS)
+# ============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: policy-service
+  namespace: openpolicy-platform
+  labels:
+    app: policy-service
+    tier: business
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: policy-service
+  template:
+    metadata:
+      labels:
+        app: policy-service
+        tier: business
+    spec:
+      containers:
+      - name: policy-service
+        image: openpolicy/policy-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9003
+        env:
+        - name: SERVICE_PORT
+          value: "9003"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9003
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9003
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: policy-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9003
+    targetPort: 9003
+    protocol: TCP
+    name: http
+  selector:
+    app: policy-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-service
+  namespace: openpolicy-platform
+  labels:
+    app: search-service
+    tier: business
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: search-service
+  template:
+    metadata:
+      labels:
+        app: search-service
+        tier: business
+    spec:
+      containers:
+      - name: search-service
+        image: openpolicy/search-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9002
+        env:
+        - name: SERVICE_PORT
+          value: "9002"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9002
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9002
+    targetPort: 9002
+    protocol: TCP
+    name: http
+  selector:
+    app: search-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: openpolicy-platform
+  labels:
+    app: notification-service
+    tier: business
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+        tier: business
+    spec:
+      containers:
+      - name: notification-service
+        image: openpolicy/notification-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9004
+        env:
+        - name: SERVICE_PORT
+          value: "9004"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: RABBITMQ_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: RABBITMQ_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9004
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9004
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9004
+    targetPort: 9004
+    protocol: TCP
+    name: http
+  selector:
+    app: notification-service
+
+---
+# ============================================================================
+# PHASE 3: REMAINING BUSINESS SERVICES (PORTS 9005-9012)
+# ============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: openpolicy-platform
+  labels:
+    app: auth-service
+    tier: business
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+        tier: business
+    spec:
+      containers:
+      - name: auth-service
+        image: openpolicy/auth-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9003
+        env:
+        - name: SERVICE_PORT
+          value: "9003"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9003
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9003
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9003
+    targetPort: 9003
+    protocol: TCP
+    name: http
+  selector:
+    app: auth-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-service
+  namespace: openpolicy-platform
+  labels:
+    app: config-service
+    tier: business
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: config-service
+  template:
+    metadata:
+      labels:
+        app: config-service
+        tier: business
+    spec:
+      containers:
+      - name: config-service
+        image: openpolicy/config-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9005
+        env:
+        - name: SERVICE_PORT
+          value: "9005"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9005
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9005
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9005
+    targetPort: 9005
+    protocol: TCP
+    name: http
+  selector:
+    app: config-service
+
+---
+# ============================================================================
+# PHASE 4: MONITORING & UTILITY SERVICES (PORTS 9006-9010)
+# ============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: health-service
+  namespace: openpolicy-platform
+  labels:
+    app: health-service
+    tier: monitoring
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: health-service
+  template:
+    metadata:
+      labels:
+        app: health-service
+        tier: monitoring
+    spec:
+      containers:
+      - name: health-service
+        image: openpolicy/health-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9006
+        env:
+        - name: SERVICE_PORT
+          value: "9006"
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9006
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9006
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: health-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9006
+    targetPort: 9006
+    protocol: TCP
+    name: http
+  selector:
+    app: health-service
+
+---
+# ============================================================================
+# PHASE 5: DATA PROCESSING SERVICES (PORTS 9008-9009)
+# ============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scraper-service
+  namespace: openpolicy-platform
+  labels:
+    app: scraper-service
+    tier: data
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: scraper-service
+  template:
+    metadata:
+      labels:
+        app: scraper-service
+        tier: data
+    spec:
+      containers:
+      - name: scraper-service
+        image: openpolicy/scraper-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9008
+        env:
+        - name: SERVICE_PORT
+          value: "9008"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9008
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9008
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scraper-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9008
+    targetPort: 9008
+    protocol: TCP
+    name: http
+  selector:
+    app: scraper-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: etl-service
+  namespace: openpolicy-platform
+  labels:
+    app: etl-service
+    tier: data
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: etl-service
+  template:
+    metadata:
+      labels:
+        app: etl-service
+        tier: data
+    spec:
+      containers:
+      - name: etl-service
+        image: openpolicy/etl-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9009
+        env:
+        - name: SERVICE_PORT
+          value: "9009"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: RABBITMQ_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: RABBITMQ_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9009
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9009
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etl-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9009
+    targetPort: 9009
+    protocol: TCP
+    name: http
+  selector:
+    app: etl-service
+
+---
+# ============================================================================
+# PHASE 6: FRONTEND SERVICES (PORTS 9019-9023)
+# ============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-frontend
+  namespace: openpolicy-platform
+  labels:
+    app: web-frontend
+    tier: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-frontend
+  template:
+    metadata:
+      labels:
+        app: web-frontend
+        tier: frontend
+    spec:
+      containers:
+      - name: web-frontend
+        image: openpolicy/web-frontend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9019
+        env:
+        - name: SERVICE_PORT
+          value: "9019"
+        - name: API_GATEWAY_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: API_GATEWAY_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9019
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9019
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-frontend
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9019
+    targetPort: 9019
+    protocol: TCP
+    name: http
+  selector:
+    app: web-frontend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mobile-api
+  namespace: openpolicy-platform
+  labels:
+    app: mobile-api
+    tier: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mobile-api
+  template:
+    metadata:
+      labels:
+        app: mobile-api
+        tier: frontend
+    spec:
+      containers:
+      - name: mobile-api
+        image: openpolicy/mobile-api:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9020
+        env:
+        - name: SERVICE_PORT
+          value: "9020"
+        - name: API_GATEWAY_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: API_GATEWAY_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9020
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9020
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mobile-api
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9020
+    targetPort: 9020
+    protocol: TCP
+    name: http
+  selector:
+    app: mobile-api
+
+---
+# ============================================================================
+# PHASE 7: LEGACY SERVICES (PORTS 9022-9023)
+# ============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legacy-django
+  namespace: openpolicy-platform
+  labels:
+    app: legacy-django
+    tier: legacy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: legacy-django
+  template:
+    metadata:
+      labels:
+        app: legacy-django
+        tier: legacy
+    spec:
+      containers:
+      - name: legacy-django
+        image: openpolicy/legacy-django:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9022
+        env:
+        - name: SERVICE_PORT
+          value: "9022"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9022
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9022
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: legacy-django
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9022
+    targetPort: 9022
+    protocol: TCP
+    name: http
+  selector:
+    app: legacy-django
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: op-import
+  namespace: openpolicy-platform
+  labels:
+    app: op-import
+    tier: legacy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: op-import
+  template:
+    metadata:
+      labels:
+        app: op-import
+        tier: legacy
+    spec:
+      containers:
+      - name: op-import
+        image: openpolicy/op-import:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9023
+        env:
+        - name: SERVICE_PORT
+          value: "9023"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9023
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9023
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: op-import
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9023
+    targetPort: 9023
+    protocol: TCP
+    name: http
+  selector:
+    app: op-import

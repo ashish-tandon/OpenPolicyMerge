@@ -1,0 +1,248 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: policy-service
+  namespace: openpolicy-platform
+  labels:
+    app: policy-service
+    tier: business
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: policy-service
+  template:
+    metadata:
+      labels:
+        app: policy-service
+        tier: business
+    spec:
+      containers:
+      - name: policy-service
+        image: openpolicy/policy-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9003  # FIXED: Changed from 9001 to 9003
+        env:
+        - name: SERVICE_PORT
+          value: "9003"  # FIXED: Changed from 9001 to 9003
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9003  # FIXED: Changed from 9001 to 9003
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9003  # FIXED: Changed from 9001 to 9003
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: policy-service
+  namespace: openpolicy-platform
+  labels:
+    app: policy-service
+    tier: business
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9003  # FIXED: Changed from 9001 to 9003
+    targetPort: 9003  # FIXED: Changed from 9001 to 9003
+    protocol: TCP
+    name: http
+  selector:
+    app: policy-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-service
+  namespace: openpolicy-platform
+  labels:
+    app: search-service
+    tier: business
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: search-service
+  template:
+    metadata:
+      labels:
+        app: search-service
+        tier: business
+    spec:
+      containers:
+      - name: search-service
+        image: openpolicy/search-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9002  # CORRECT: Already correct
+        env:
+        - name: SERVICE_PORT
+          value: "9002"  # CORRECT: Already correct
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9002
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search-service
+  namespace: openpolicy-platform
+  labels:
+    app: search-service
+    tier: business
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9002
+    targetPort: 9002
+    protocol: TCP
+    name: http
+  selector:
+    app: search-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: openpolicy-platform
+  labels:
+    app: notification-service
+    tier: business
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+        tier: business
+    spec:
+      containers:
+      - name: notification-service
+        image: openpolicy/notification-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9004  # CORRECT: Already correct
+        env:
+        - name: SERVICE_PORT
+          value: "9004"  # CORRECT: Already correct
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: REDIS_URL
+        - name: RABBITMQ_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: RABBITMQ_URL
+        - name: ERROR_REPORTING_URL
+          valueFrom:
+            configMapKeyRef:
+              name: openpolicy-config
+              key: ERROR_REPORTING_URL
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9004
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9004
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: openpolicy-platform
+  labels:
+    app: notification-service
+    tier: business
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9004
+    targetPort: 9004
+    protocol: TCP
+    name: http
+  selector:
+    app: notification-service

@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openpolicy-config
+  namespace: openpolicy-platform
+data:
+  # Database configuration
+  DATABASE_URL: "postgresql://postgres:postgres@postgresql:5432/openpolicy"
+  REDIS_URL: "redis://redis:6379"
+  RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+  
+  # Service URLs
+  ERROR_REPORTING_URL: "http://error-reporting-service:9024"
+  NOTIFICATION_URL: "http://notification-service:9004"
+  POLICY_URL: "http://policy-service:9003"
+  SEARCH_URL: "http://search-service:9002"
+  ETL_URL: "http://etl:80"
+  API_GATEWAY_URL: "http://api-gateway:8080"
+  
+  # Service ports
+  API_GATEWAY_PORT: "8080"
+  ETL_PORT: "8007"
+  POLICY_SERVICE_PORT: "9003"
+  SEARCH_SERVICE_PORT: "9004"
+  NOTIFICATION_SERVICE_PORT: "9004"
+  HEALTH_SERVICE_PORT: "9006"
+  
+  # Environment
+  ENVIRONMENT: "development"
+  LOG_LEVEL: "INFO"
+  
+  # CORS settings
+  CORS_ORIGINS: "*"
+  CORS_ALLOW_CREDENTIALS: "true"
+  CORS_ALLOW_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
+  CORS_ALLOW_HEADERS: "*"

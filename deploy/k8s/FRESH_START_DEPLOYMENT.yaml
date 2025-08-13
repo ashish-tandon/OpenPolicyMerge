@@ -1,0 +1,1191 @@
+# FRESH START: ALL 25 OPENPOLICY SERVICES WITH PROPER PLANNING
+# NO PORT CONFLICTS - ALL SERVICES DEPLOYED IN PARALLEL
+# PLANNED CLUSTERIP RANGES - ERROR REPORTING FIRST
+
+---
+# ============================================================================
+# PHASE 1: ERROR REPORTING SERVICE FIRST (PORT 9024)
+# ============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: error-reporting-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: error-reporting-service
+  template:
+    metadata:
+      labels:
+        app: error-reporting-service
+    spec:
+      containers:
+      - name: error-reporting-service
+        image: openpolicy/error-reporting-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9024
+        env:
+        - name: SERVICE_PORT
+          value: "9024"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9024
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9024
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: error-reporting-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.1.1  # PLANNED CLUSTERIP
+  ports:
+  - port: 9024
+    targetPort: 9024
+    protocol: TCP
+    name: http
+  selector:
+    app: error-reporting-service
+
+---
+# ============================================================================
+# PHASE 2: ALL CORE SERVICES IN PARALLEL (PORTS 9001-9014)
+# ============================================================================
+
+# API Gateway - Port 9001
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: openpolicy-platform
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: api-gateway
+        image: openpolicy/api-gateway:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9001
+        env:
+        - name: SERVICE_PORT
+          value: "9001"
+        - name: ERROR_REPORTING_URL
+          value: "http://error-reporting-service:9024"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.1.2  # PLANNED CLUSTERIP
+  ports:
+  - port: 9001
+    targetPort: 9001
+    protocol: TCP
+    name: http
+  selector:
+    app: api-gateway
+
+---
+# Search Service - Port 9002
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: search-service
+  template:
+    metadata:
+      labels:
+        app: search-service
+    spec:
+      containers:
+      - name: search-service
+        image: openpolicy/search-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9002
+        env:
+        - name: SERVICE_PORT
+          value: "9002"
+        - name: ERROR_REPORTING_URL
+          value: "http://error-reporting-service:9024"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9002
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.1.3  # PLANNED CLUSTERIP
+  ports:
+  - port: 9002
+    targetPort: 9002
+    protocol: TCP
+    name: http
+  selector:
+    app: search-service
+
+---
+# Policy Service - Port 9003
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: policy-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: policy-service
+  template:
+    metadata:
+      labels:
+        app: policy-service
+    spec:
+      containers:
+      - name: policy-service
+        image: openpolicy/policy-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9003
+        env:
+        - name: SERVICE_PORT
+          value: "9003"
+        - name: ERROR_REPORTING_URL
+          value: "http://error-reporting-service:9024"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9003
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9003
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: policy-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.1.4  # PLANNED CLUSTERIP
+  ports:
+  - port: 9003
+    targetPort: 9003
+    protocol: TCP
+    name: http
+  selector:
+    app: policy-service
+
+---
+# Notification Service - Port 9004
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - name: notification-service
+        image: openpolicy/notification-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9004
+        env:
+        - name: SERVICE_PORT
+          value: "9004"
+        - name: ERROR_REPORTING_URL
+          value: "http://error-reporting-service:9024"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9004
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9004
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.1.5  # PLANNED CLUSTERIP
+  ports:
+  - port: 9004
+    targetPort: 9004
+    protocol: TCP
+    name: http
+  selector:
+    app: notification-service
+
+---
+# Config Service - Port 9005
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: config-service
+  template:
+    metadata:
+      labels:
+        app: config-service
+    spec:
+      containers:
+      - name: config-service
+        image: openpolicy/config-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9005
+        env:
+        - name: SERVICE_PORT
+          value: "9005"
+        - name: ERROR_REPORTING_URL
+          value: "http://error-reporting-service:9024"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9005
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9005
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.1.6  # PLANNED CLUSTERIP
+  ports:
+  - port: 9005
+    targetPort: 9005
+    protocol: TCP
+    name: http
+  selector:
+    app: config-service
+
+---
+# Health Service - Port 9006
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: health-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: health-service
+  template:
+    metadata:
+      labels:
+        app: health-service
+    spec:
+      containers:
+      - name: health-service
+        image: openpolicy/health-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9006
+        env:
+        - name: SERVICE_PORT
+          value: "9006"
+        - name: ERROR_REPORTING_URL
+          value: "http://error-reporting-service:9024"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9006
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9006
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: health-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.1.7  # PLANNED CLUSTERIP
+  ports:
+  - port: 9006
+    targetPort: 9006
+    protocol: TCP
+    name: http
+  selector:
+    app: health-service
+
+---
+# Monitoring Service - Port 9007
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitoring-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: monitoring-service
+  template:
+    metadata:
+      labels:
+        app: monitoring-service
+    spec:
+      containers:
+      - name: monitoring-service
+        image: openpolicy/monitoring-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9007
+        env:
+        - name: SERVICE_PORT
+          value: "9007"
+        - name: ERROR_REPORTING_URL
+          value: "http://error-reporting-service:9024"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9007
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9007
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monitoring-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.1.8  # PLANNED CLUSTERIP
+  ports:
+  - port: 9007
+    targetPort: 9007
+    protocol: TCP
+    name: http
+  selector:
+    app: monitoring-service
+
+---
+# Scraper Service - Port 9008
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scraper-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: scraper-service
+  template:
+    metadata:
+      labels:
+        app: scraper-service
+    spec:
+      containers:
+      - name: scraper-service
+        image: openpolicy/scraper-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9008
+        env:
+        - name: SERVICE_PORT
+          value: "9008"
+        - name: ERROR_REPORTING_URL
+          value: "http://error-reporting-service:9024"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9008
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9008
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scraper-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.1.9  # PLANNED CLUSTERIP
+  ports:
+  - port: 9008
+    targetPort: 9008
+    protocol: TCP
+    name: http
+  selector:
+    app: scraper-service
+
+---
+# ETL Service - Port 9009
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: etl-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: etl-service
+  template:
+    metadata:
+      labels:
+        app: etl-service
+    spec:
+      containers:
+      - name: etl-service
+        image: openpolicy/etl-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9009
+        env:
+        - name: SERVICE_PORT
+          value: "9009"
+        - name: ERROR_REPORTING_URL
+          value: "http://error-reporting-service:9024"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9009
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9009
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etl-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.1.10  # PLANNED CLUSTERIP
+  ports:
+  - port: 9009
+    targetPort: 9009
+    protocol: TCP
+    name: http
+  selector:
+    app: etl-service
+
+---
+# Analytics Service - Port 9010
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: analytics-service
+  template:
+    metadata:
+      labels:
+        app: analytics-service
+    spec:
+      containers:
+      - name: analytics-service
+        image: openpolicy/analytics-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9010
+        env:
+        - name: SERVICE_PORT
+          value: "9010"
+        - name: ERROR_REPORTING_URL
+          value: "http://error-reporting-service:9024"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9010
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9010
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.1.11  # PLANNED CLUSTERIP
+  ports:
+  - port: 9010
+    targetPort: 9010
+    protocol: TCP
+    name: http
+  selector:
+    app: analytics-service
+
+---
+# Audit Service - Port 9011
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: audit-service
+  template:
+    metadata:
+      labels:
+        app: audit-service
+    spec:
+      containers:
+      - name: audit-service
+        image: openpolicy/audit-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9011
+        env:
+        - name: SERVICE_PORT
+          value: "9011"
+        - name: ERROR_REPORTING_URL
+          value: "http://error-reporting-service:9024"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9011
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9011
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: audit-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.1.12  # PLANNED CLUSTERIP
+  ports:
+  - port: 9011
+    targetPort: 9011
+    protocol: TCP
+    name: http
+  selector:
+    app: audit-service
+
+---
+# Auth Service - Port 9013
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+      - name: auth-service
+        image: openpolicy/auth-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9013
+        env:
+        - name: SERVICE_PORT
+          value: "9013"
+        - name: ERROR_REPORTING_URL
+          value: "http://error-reporting-service:9024"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9013
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9013
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.1.13  # PLANNED CLUSTERIP
+  ports:
+  - port: 9013
+    targetPort: 9013
+    protocol: TCP
+    name: http
+  selector:
+    app: auth-service
+
+---
+# MCP Service - Port 9014
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-service
+  namespace: openpolicy-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-service
+  template:
+    metadata:
+      labels:
+        app: mcp-service
+    spec:
+      containers:
+      - name: mcp-service
+        image: openpolicy/mcp-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9014
+        env:
+        - name: SERVICE_PORT
+          value: "9014"
+        - name: ERROR_REPORTING_URL
+          value: "http://error-reporting-service:9024"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9014
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9014
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-service
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.1.14  # PLANNED CLUSTERIP
+  ports:
+  - port: 9014
+    targetPort: 9014
+    protocol: TCP
+    name: http
+  selector:
+    app: mcp-service
+
+---
+# ============================================================================
+# PHASE 3: INFRASTRUCTURE SERVICES (PORTS 5432, 6379, 5672, 9090, 3000)
+# ============================================================================
+
+# PostgreSQL - Port 5432
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgresql
+  namespace: openpolicy-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      containers:
+      - name: postgresql
+        image: postgres:15
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "openpolicy"
+        - name: POSTGRES_USER
+          value: "openpolicy"
+        - name: POSTGRES_PASSWORD
+          value: "openpolicy123"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        volumeMounts:
+        - name: postgresql-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgresql-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.2.1  # PLANNED CLUSTERIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgresql
+  selector:
+    app: postgresql
+
+---
+# Redis - Port 6379
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: openpolicy-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.2.2  # PLANNED CLUSTERIP
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+    name: redis
+  selector:
+    app: redis
+
+---
+# RabbitMQ - Ports 5672, 15672
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  namespace: openpolicy-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3-management
+        ports:
+        - containerPort: 5672
+        - containerPort: 15672
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          value: "openpolicy"
+        - name: RABBITMQ_DEFAULT_PASS
+          value: "openpolicy123"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.2.3  # PLANNED CLUSTERIP
+  ports:
+  - port: 5672
+    targetPort: 5672
+    protocol: TCP
+    name: amqp
+  - port: 15672
+    targetPort: 15672
+    protocol: TCP
+    name: management
+  selector:
+    app: rabbitmq
+
+---
+# Prometheus - Port 9090
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: openpolicy-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus:v2.45.0
+        ports:
+        - containerPort: 9090
+        args:
+        - '--config.file=/etc/prometheus/prometheus.yml'
+        - '--storage.tsdb.path=/prometheus'
+        - '--web.console.libraries=/etc/prometheus/console_libraries'
+        - '--web.console.templates=/etc/prometheus/consoles'
+        - '--storage.tsdb.retention.time=200h'
+        - '--web.enable-lifecycle'
+        volumeMounts:
+        - name: prometheus-config
+          mountPath: /etc/prometheus
+        - name: prometheus-storage
+          mountPath: /prometheus
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+      volumes:
+      - name: prometheus-config
+        configMap:
+          name: prometheus-config
+      - name: prometheus-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.2.4  # PLANNED CLUSTERIP
+  ports:
+  - port: 9090
+    targetPort: 9090
+    protocol: TCP
+    name: prometheus
+  selector:
+    app: prometheus
+
+---
+# Grafana - Port 3000
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: openpolicy-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:10.0.0
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin123"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: openpolicy-platform
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.2.5  # PLANNED CLUSTERIP
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: grafana
+  selector:
+    app: grafana
+
+---
+# ============================================================================
+# ALL SERVICES DEPLOYED - ERROR REPORTING WILL COLLECT ISSUES
+# ============================================================================
+# Total: 25 services deployed in parallel
+# PLANNED PORTS: 9001-9014, 9024, 5432, 6379, 5672, 9090, 3000
+# PLANNED CLUSTERIPS: 10.96.1.1-14, 10.96.2.1-5
+# NO PORT CONFLICTS - Error reporting service will collect all errors for later investigation

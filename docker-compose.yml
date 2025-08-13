@@ -1,9 +1,9 @@
-version: '3.8'
+version: '3.9'
 
 services:
   # PostgreSQL Database with PostGIS
   postgres:
-    image: postgis/postgis:15-3.3
+    image: postgis/postgis:16-3.4
     environment:
       - POSTGRES_DB=openpolicy
       - POSTGRES_USER=postgres
@@ -23,7 +23,7 @@ services:
 
   # Redis Cache
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     ports:
       - "6379:6379"
     volumes:
@@ -42,7 +42,7 @@ services:
       context: ./services/scraper-service
       dockerfile: Dockerfile
     ports:
-      - "8005:8005"
+      - "9008:9008"
     environment:
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/openpolicy
       - REDIS_URL=redis://redis:6379/1
@@ -62,7 +62,7 @@ services:
       - openpolicy-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8005/healthz"]
+      test: ["CMD", "curl", "-f", "http://localhost:9008/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -74,17 +74,14 @@ services:
       context: ./services/etl
       dockerfile: Dockerfile
     ports:
-      - "8003:8003"
+      - "9007:9007"
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USERNAME=postgres
       - DB_PASSWORD=password
       - DB_NAME=openpolicy
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - API_HOST=0.0.0.0
-      - API_PORT=8003
+      - REDIS_URL=redis://redis:6379/1
       - ENVIRONMENT=development
       - LOG_LEVEL=INFO
     depends_on:
@@ -101,29 +98,151 @@ services:
       - openpolicy-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8003/healthz"]
+      test: ["CMD", "curl", "-f", "http://localhost:9007/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
-  # API Gateway Service (placeholder)
-  api-gateway:
-    image: nginx:alpine
+  # Policy Service
+  policy-service:
+    build:
+      context: ./services/policy-service
+      dockerfile: Dockerfile
     ports:
-      - "8000:80"
+      - "9001:9001"
     environment:
-      - NGINX_HOST=localhost
-      - NGINX_PORT=80
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/openpolicy
+      - REDIS_URL=redis://redis:6379/1
+      - ENVIRONMENT=development
+      - LOG_LEVEL=INFO
     depends_on:
-      - scraper-service
-      - etl-service
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/policy-service:/app
+      - policy_data:/app/data
+      - policy_logs:/app/logs
     networks:
       - openpolicy-network
-    command: >
-      sh -c "echo 'API Gateway placeholder - service not yet implemented' && 
-             echo 'server { listen 80; location / { return 200 \"API Gateway coming soon\"; } }' > /etc/nginx/conf.d/default.conf &&
-             nginx -g 'daemon off;'"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "9009:9009"
+    environment:
+      - GATEWAY_PORT=9009
+      - GATEWAY_HOST=0.0.0.0
+      - ENVIRONMENT=development
+      - LOG_LEVEL=INFO
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./services/api-gateway:/app
+      - gateway_logs:/app/logs
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9009/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Web Frontend
+  web-frontend:
+    build:
+      context: ./services/web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:9009
+      - NEXT_PUBLIC_ENVIRONMENT=development
+    depends_on:
+      - api-gateway
+    volumes:
+      - ./services/web:/app
+      - /app/node_modules
+      - web_logs:/app/logs
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Mobile API
+  mobile-api:
+    build:
+      context: ./services/mobile-api
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - NODE_ENV=development
+      - API_URL=http://localhost:9009
+      - ENVIRONMENT=development
+    depends_on:
+      - api-gateway
+    volumes:
+      - ./services/mobile-api:/app
+      - /app/node_modules
+      - mobile_logs:/app/logs
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Monitoring Stack
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deploy/monitoring/grafana-dashboards:/etc/grafana/provisioning/dashboards
+    networks:
+      - openpolicy-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
 
 volumes:
   postgres_data:
@@ -132,6 +251,13 @@ volumes:
   scraper_logs:
   etl_data:
   etl_logs:
+  policy_data:
+  policy_logs:
+  gateway_logs:
+  web_logs:
+  mobile_logs:
+  prometheus_data:
+  grafana_data:
 
 networks:
   openpolicy-network:

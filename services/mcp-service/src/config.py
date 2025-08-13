@@ -1,198 +1,64 @@
 """
-Configuration for OpenPolicy MCP Service (Model Context Protocol)
-
-This service acts as the middle layer between scrapers and databases,
-processing scraped data and injecting it into the appropriate databases.
+Configuration for MCP Service
 """
-
-from pydantic import BaseSettings, Field
-from typing import List, Optional, Dict
 import os
+from typing import Optional
 
-class ServerSettings(BaseSettings):
-    host: str = Field(default="0.0.0.0", env="HOST")
-    port: int = Field(default=8006, env="PORT")
-    debug: bool = Field(default=False, env="DEBUG")
-    workers: int = Field(default=1, env="WORKERS")
-
-class DatabaseSettings(BaseSettings):
-    url: str = Field(default="postgresql://postgres:password@localhost:5432/openpolicy", env="DATABASE_URL")
-    pool_size: int = Field(default=10, env="DB_POOL_SIZE")
-    max_overflow: int = Field(default=20, env="DB_MAX_OVERFLOW")
-    echo: bool = Field(default=False, env="DB_ECHO")
+class Config:
+    """Service configuration"""
     
-    # Schema configuration for single database approach
-    schemas: Dict[str, str] = Field(default={
-        "federal": "federal",
-        "provincial": "provincial", 
-        "municipal": "municipal",
-        "representatives": "representatives",
-        "bills": "bills",
-        "etl": "etl",
-        "monitoring": "monitoring",
-        "auth": "auth"
-    })
-
-class RedisSettings(BaseSettings):
-    url: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
-    host: str = Field(default="localhost", env="REDIS_HOST")
-    port: int = Field(default=6379, env="REDIS_PORT")
-    password: Optional[str] = Field(default=None, env="REDIS_PASSWORD")
-    db: int = Field(default=0, env="REDIS_DB")
-
-class OPASettings(BaseSettings):
-    url: str = Field(default="http://opa:8181", env="OPA_URL")
-    enabled: bool = Field(default=True, env="OPA_ENABLED")
-    timeout: int = Field(default=30, env="OPA_TIMEOUT")
+    # Service identification
+    SERVICE_NAME = "mcp-service"
+    SERVICE_VERSION = "1.0.0"
+    SERVICE_PORT = int(os.getenv("SERVICE_PORT", 9012))
     
-    # Policy paths for different data types
-    policies: Dict[str, str] = Field(default={
-        "federal": "/policies/federal",
-        "provincial": "/policies/provincial",
-        "municipal": "/policies/municipal",
-        "representatives": "/policies/representatives",
-        "bills": "/policies/bills"
-    })
-
-class DataProcessingSettings(BaseSettings):
-    # Data validation
-    validate_data: bool = Field(default=True, env="VALIDATE_DATA")
-    strict_validation: bool = Field(default=False, env="STRICT_VALIDATION")
+    # MCP configuration
+    MCP_SERVER_HOST = os.getenv("MCP_SERVER_HOST", "0.0.0.0")
+    MCP_SERVER_PORT = int(os.getenv("MCP_SERVER_PORT", 9012))
+    MCP_PROTOCOL_VERSION = os.getenv("MCP_PROTOCOL_VERSION", "1.0")
+    MCP_ENABLE_TLS = os.getenv("MCP_ENABLE_TLS", "false").lower() == "true"
     
-    # Data transformation
-    transform_data: bool = Field(default=True, env="TRANSFORM_DATA")
-    normalize_data: bool = Field(default=True, env="NORMALIZE_DATA")
+    # Model configuration
+    DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt-4")
+    MAX_TOKENS = int(os.getenv("MAX_TOKENS", 4096))
+    TEMPERATURE = float(os.getenv("TEMPERATURE", 0.7))
+    TOP_P = float(os.getenv("TOP_P", 1.0))
     
-    # Batch processing
-    batch_size: int = Field(default=1000, env="BATCH_SIZE")
-    max_workers: int = Field(default=4, env="MAX_WORKERS")
+    # API configuration
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_API_BASE = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
+    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+    ANTHROPIC_API_BASE = os.getenv("ANTHROPIC_API_BASE", "https://api.anthropic.com")
     
-    # Data quality
-    min_quality_score: float = Field(default=0.8, env="MIN_QUALITY_SCORE")
-    auto_fix_errors: bool = Field(default=True, env="AUTO_FIX_ERRORS")
-
-class DataSourceSettings(BaseSettings):
-    # Data source configuration
-    sources: Dict[str, Dict] = Field(default={
-        "federal": {
-            "name": "Federal Parliament",
-            "enabled": True,
-            "priority": "high",
-            "update_frequency": "daily",
-            "data_types": ["bills", "representatives", "votes", "committees"]
-        },
-        "provincial": {
-            "name": "Provincial Legislatures",
-            "enabled": True,
-            "priority": "high",
-            "update_frequency": "daily",
-            "data_types": ["bills", "representatives", "votes", "committees"],
-            "provinces": ["AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT"]
-        },
-        "municipal": {
-            "name": "Municipal Councils",
-            "enabled": True,
-            "priority": "medium",
-            "update_frequency": "weekly",
-            "data_types": ["representatives", "meetings", "resolutions"],
-            "cities": ["Toronto", "Vancouver", "Montreal", "Calgary", "Edmonton", "Ottawa"]
-        },
-        "openparliament": {
-            "name": "OpenParliament",
-            "enabled": True,
-            "priority": "high",
-            "update_frequency": "daily",
-            "data_types": ["bills", "representatives", "votes", "committees", "debates"]
-        },
-        "opennorth": {
-            "name": "OpenNorth",
-            "enabled": True,
-            "priority": "high",
-            "update_frequency": "weekly",
-            "data_types": ["representatives", "boundaries", "elections"]
-        }
-    })
-
-class MonitoringSettings(BaseSettings):
-    enabled: bool = Field(default=True, env="MONITORING_ENABLED")
-    prometheus_enabled: bool = Field(default=True, env="PROMETHEUS_ENABLED")
-    prometheus_port: int = Field(default=9090, env="PROMETHEUS_PORT")
-    metrics_path: str = Field(default="/metrics", env="METRICS_PATH")
-
-class LoggingSettings(BaseSettings):
-    level: str = Field(default="info", env="LOG_LEVEL")
-    format: str = Field(default="json", env="LOG_FORMAT")
-    file_enabled: bool = Field(default=True, env="LOG_FILE_ENABLED")
-    file_path: str = Field(default="logs/mcp-service.log", env="LOG_FILE_PATH")
-    max_size: str = Field(default="10MB", env="LOG_MAX_SIZE")
-    max_files: int = Field(default=5, env="LOG_MAX_FILES")
-
-class CORSettings(BaseSettings):
-    origins: List[str] = Field(default=["*"], env="CORS_ORIGINS")
-    allow_credentials: bool = Field(default=True, env="CORS_ALLOW_CREDENTIALS")
-    allow_methods: List[str] = Field(default=["*"], env="CORS_ALLOW_METHODS")
-    allow_headers: List[str] = Field(default=["*"], env="CORS_ALLOW_HEADERS")
-
-class SwaggerSettings(BaseSettings):
-    enabled: bool = Field(default=True, env="SWAGGER_ENABLED")
-    title: str = Field(default="OpenPolicy MCP Service API")
-    description: str = Field(default="Model Context Protocol service for data processing")
-    version: str = Field(default="1.0.0")
-
-class Settings(BaseSettings):
-    # Environment
-    environment: str = Field(default="development", env="ENVIRONMENT")
-    debug: bool = Field(default=False, env="DEBUG")
+    # Rate limiting
+    REQUESTS_PER_MINUTE = int(os.getenv("REQUESTS_PER_MINUTE", 60))
+    MAX_CONCURRENT_REQUESTS = int(os.getenv("MAX_CONCURRENT_REQUESTS", 10))
+    REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", 30))
     
-    # Server
-    server: ServerSettings = ServerSettings()
+    # External service dependencies
+    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost/db")
+    CACHE_URL = os.getenv("CACHE_URL", "redis://localhost:6379")
+    QUEUE_URL = os.getenv("QUEUE_URL", "amqp://localhost:5672")
     
-    # Database
-    database: DatabaseSettings = DatabaseSettings()
+    # Logging configuration
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+    LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     
-    # Redis
-    redis: RedisSettings = RedisSettings()
+    # Health check settings
+    HEALTH_CHECK_INTERVAL = int(os.getenv("HEALTH_CHECK_INTERVAL", 30))
     
-    # OPA Integration
-    opa: OPASettings = OPASettings()
+    # Metrics collection
+    ENABLE_METRICS = os.getenv("ENABLE_METRICS", "true").lower() == "true"
     
-    # Data Processing
-    data_processing: DataProcessingSettings = DataProcessingSettings()
+    # Performance settings
+    WORKER_POOL_SIZE = int(os.getenv("WORKER_POOL_SIZE", 4))
+    MAX_MEMORY_USAGE = int(os.getenv("MAX_MEMORY_USAGE", 1024 * 1024 * 1024))  # 1GB
     
-    # Data Sources
-    data_sources: DataSourceSettings = DataSourceSettings()
+    # Security settings
+    ENABLE_AUTHENTICATION = os.getenv("ENABLE_AUTHENTICATION", "true").lower() == "true"
+    API_KEY_HEADER = os.getenv("API_KEY_HEADER", "X-API-Key")
+    ENABLE_RATE_LIMITING = os.getenv("ENABLE_RATE_LIMITING", "true").lower() == "true"
     
     # Monitoring
-    monitoring: MonitoringSettings = MonitoringSettings()
-    
-    # Logging
-    logging: LoggingSettings = LoggingSettings()
-    
-    # CORS
-    cors: CORSettings = CORSettings()
-    
-    # Swagger
-    swagger: SwaggerSettings = SwaggerSettings()
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-
-# Create settings instance
-settings = Settings()
-
-# Environment-specific overrides
-if settings.environment == "production":
-    settings.debug = False
-    settings.logging.level = "warn"
-    settings.swagger.enabled = False
-    settings.cors.origins = ["https://yourdomain.com"]
-    settings.data_processing.batch_size = 5000
-    settings.data_processing.max_workers = 8
-elif settings.environment == "test":
-    settings.database.url = "postgresql://postgres:password@localhost:5432/openpolicy_test"
-    settings.redis.db = 1
-    settings.logging.level = "debug"
-    settings.data_processing.batch_size = 100
-    settings.data_processing.max_workers = 2
+    ENABLE_SLOW_REQUEST_LOGGING = os.getenv("ENABLE_SLOW_REQUEST_LOGGING", "true").lower() == "true"
+    SLOW_REQUEST_THRESHOLD = float(os.getenv("SLOW_REQUEST_THRESHOLD", 2.0))  # 2 seconds

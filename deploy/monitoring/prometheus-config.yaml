@@ -1,0 +1,185 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    
+    rule_files:
+      - "openpolicy-rules.yml"
+    
+    scrape_configs:
+      # OpenPolicy Platform Services
+      - job_name: 'openpolicy-api-gateway'
+        static_configs:
+          - targets: ['api-gateway.openpolicy-platform.svc.cluster.local:9001']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-error-reporting'
+        static_configs:
+          - targets: ['error-reporting-service.openpolicy-platform.svc.cluster.local:9024']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-policy-service'
+        static_configs:
+          - targets: ['policy-service.openpolicy-platform.svc.cluster.local:9001']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-search-service'
+        static_configs:
+          - targets: ['search-service.openpolicy-platform.svc.cluster.local:9002']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-auth-service'
+        static_configs:
+          - targets: ['auth-service.openpolicy-platform.svc.cluster.local:9003']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-notification-service'
+        static_configs:
+          - targets: ['notification-service.openpolicy-platform.svc.cluster.local:9004']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-config-service'
+        static_configs:
+          - targets: ['config-service.openpolicy-platform.svc.cluster.local:9005']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-health-service'
+        static_configs:
+          - targets: ['health-service.openpolicy-platform.svc.cluster.local:9006']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-etl-service'
+        static_configs:
+          - targets: ['etl-service.openpolicy-platform.svc.cluster.local:9007']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-scraper-service'
+        static_configs:
+          - targets: ['scraper-service.openpolicy-platform.svc.cluster.local:9008']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-monitoring-service'
+        static_configs:
+          - targets: ['monitoring-service.openpolicy-platform.svc.cluster.local:9010']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-plotly-service'
+        static_configs:
+          - targets: ['plotly-service.openpolicy-platform.svc.cluster.local:9011']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-mcp-service'
+        static_configs:
+          - targets: ['mcp-service.openpolicy-platform.svc.cluster.local:9012']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-analytics-service'
+        static_configs:
+          - targets: ['analytics-service.openpolicy-platform.svc.cluster.local:9013']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-audit-service'
+        static_configs:
+          - targets: ['audit-service.openpolicy-platform.svc.cluster.local:9014']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-database-service'
+        static_configs:
+          - targets: ['database-service.openpolicy-platform.svc.cluster.local:9015']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-cache-service'
+        static_configs:
+          - targets: ['cache-service.openpolicy-platform.svc.cluster.local:9016']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-queue-service'
+        static_configs:
+          - targets: ['queue-service.openpolicy-platform.svc.cluster.local:9017']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-storage-service'
+        static_configs:
+          - targets: ['storage-service.openpolicy-platform.svc.cluster.local:9018']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-web-frontend'
+        static_configs:
+          - targets: ['web-frontend.openpolicy-platform.svc.cluster.local:9019']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-mobile-api'
+        static_configs:
+          - targets: ['mobile-api.openpolicy-platform.svc.cluster.local:9020']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-admin-dashboard'
+        static_configs:
+          - targets: ['admin-dashboard.openpolicy-platform.svc.cluster.local:9021']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-legacy-django'
+        static_configs:
+          - targets: ['legacy-django.openpolicy-platform.svc.cluster.local:9022']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      - job_name: 'openpolicy-op-import'
+        static_configs:
+          - targets: ['op-import.openpolicy-platform.svc.cluster.local:9023']
+        metrics_path: /metrics
+        scrape_interval: 10s
+        
+      # Kubernetes Infrastructure
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
